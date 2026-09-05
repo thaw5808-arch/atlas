@@ -34,16 +34,98 @@ const project = (lat: number, lon: number) => ({
   y: ((90 - lat) / 180) * 500,
 });
 
+// Very low-detail continent silhouettes, as a handful of [lat, lon] corners
+// each — just enough to read as landmasses, not a real coastline. Run
+// through the same `project` as the markers so they always land in the
+// right place relative to the plotted points.
+const LANDMASSES: [number, number][][] = [
+  // North America
+  [
+    [72, -165], [71, -140], [60, -95], [50, -80], [45, -65], [40, -74],
+    [25, -80], [18, -95], [9, -83], [15, -92], [20, -105], [32, -117],
+    [48, -125], [60, -150],
+  ],
+  // South America
+  [
+    [12, -72], [10, -62], [-5, -35], [-23, -43], [-34, -58], [-55, -68],
+    [-50, -74], [-18, -70], [0, -79],
+  ],
+  // Europe
+  [
+    [71, 25], [65, -10], [45, -10], [36, -6], [38, 15], [45, 20],
+    [55, 40], [65, 45],
+  ],
+  // Africa
+  [
+    [37, 10], [33, -8], [15, -17], [5, -10], [-5, 10], [-25, 15],
+    [-34, 18], [-25, 33], [0, 42], [12, 45], [20, 38], [30, 32],
+  ],
+  // Asia
+  [
+    [75, 60], [70, 140], [60, 160], [45, 140], [35, 130], [20, 110],
+    [10, 100], [5, 95], [8, 80], [8, 77], [20, 70], [35, 55],
+    [45, 50], [55, 45], [65, 40],
+  ],
+  // Australia
+  [
+    [-12, 130], [-10, 142], [-20, 150], [-35, 150], [-38, 145],
+    [-35, 138], [-32, 115], [-20, 115],
+  ],
+];
+
+function landmassPath(points: [number, number][]) {
+  return (
+    points
+      .map(([lat, lon], index) => {
+        const { x, y } = project(lat, lon);
+        return `${index === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
+      })
+      .join(" ") + " Z"
+  );
+}
+
 export function CountryExplorer({ countries, initialCode }: { countries: CountryEntry[]; initialCode?: string }) {
   const [selected, setSelected] = useState<CountryEntry | null>(
     countries.find((country) => country.code === initialCode) ?? null,
   );
+
+  const positioned = countries
+    .filter((country): country is CountryEntry & { latitude: number; longitude: number } =>
+      country.latitude != null && country.longitude != null,
+    )
+    .map((country) => {
+      const { x, y } = project(country.latitude, country.longitude);
+      return { country, x, y, radius: 6 + Math.min(14, country.universityCount * 3) };
+    });
+
+  // When two markers land within ~40px of each other, their default labels
+  // (set to the right of the marker, roughly at marker height) collide. Drop
+  // the later one down a line so both stay legible.
+  const droppedLabels = new Set<string>();
+  positioned.forEach((point, index) => {
+    for (let earlier = 0; earlier < index; earlier++) {
+      const other = positioned[earlier];
+      if (Math.hypot(point.x - other.x, point.y - other.y) < 40) {
+        droppedLabels.add(point.country.code);
+        break;
+      }
+    }
+  });
 
   return (
     <div className="relative">
       <div className="panel overflow-hidden">
         <svg viewBox="0 0 1000 500" className="h-auto w-full" role="img" aria-label="Countries in the dataset plotted by coordinates">
           <rect width="1000" height="500" fill="#e9ede7" />
+          {LANDMASSES.map((points, index) => (
+            <path
+              key={`land${index}`}
+              d={landmassPath(points)}
+              fill="#d6ddd0"
+              stroke="#0b1f29"
+              strokeOpacity={0.08}
+            />
+          ))}
           {Array.from({ length: 12 }).map((_, index) => (
             <line
               key={`v${index}`}
@@ -67,16 +149,14 @@ export function CountryExplorer({ countries, initialCode }: { countries: Country
             />
           ))}
 
-          {countries.map((country) => {
-            if (country.latitude == null || country.longitude == null) return null;
-            const { x, y } = project(country.latitude, country.longitude);
+          {positioned.map(({ country, x, y, radius }) => {
             const active = selected?.code === country.code;
-            const radius = 6 + Math.min(14, country.universityCount * 3);
+            const labelY = y + 4 + (droppedLabels.has(country.code) ? 14 : 0);
             return (
               <g key={country.code} onClick={() => setSelected(country)} style={{ cursor: "pointer" }}>
                 <circle cx={x} cy={y} r={radius} fill="#17635a" fillOpacity={active ? 0.28 : 0.14} />
                 <circle cx={x} cy={y} r={4} fill={active ? "#0b1f29" : "#17635a"} />
-                <text x={x + radius + 4} y={y + 4} fontSize={13} fill="#47606b">
+                <text x={x + radius + 4} y={labelY} fontSize={13} fill="#47606b">
                   {country.name}
                 </text>
               </g>
