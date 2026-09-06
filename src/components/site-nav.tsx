@@ -88,7 +88,7 @@ export function SiteNav({
 
           <span className="mx-2 h-6 w-px bg-line" />
 
-          <Link href="/universities" aria-label="Search universities" className="btn btn-ghost h-9 w-9 px-0">
+          <Link href="/search" aria-label="Search" className="btn btn-ghost h-9 w-9 px-0">
             <Search size={17} />
           </Link>
           <Link href="/saved" aria-label="Saved universities" className="btn btn-ghost h-9 w-9 px-0">

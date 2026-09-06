@@ -125,7 +125,7 @@ export default async function ScholarshipsPage({
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
           {matched.map(({ scholarship, input, match, tuitionShare }) => (
-            <article key={scholarship.id} className="panel p-5">
+            <article key={scholarship.id} id={scholarship.id} className="panel p-5 scroll-mt-24">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h2 className="text-base leading-snug">{scholarship.name}</h2>
