@@ -13,7 +13,11 @@ const LINKS = [
 export function AdminNav() {
   const pathname = usePathname();
   return (
-    <nav className="glass flex gap-1 rounded-full p-1.5">
+    // flex-wrap (plus rounded-2xl rather than rounded-full, which only reads as a pill on one
+    // row) so a narrow viewport wraps this to a second line instead of overflowing the screen
+    // with "Representatives" cut off and unreachable — matches how AdminDataNav's chip strip
+    // already degrades at mobile widths.
+    <nav className="glass flex flex-wrap gap-1 rounded-2xl p-1.5">
       {LINKS.map((link) => (
         <Link
           key={link.href}

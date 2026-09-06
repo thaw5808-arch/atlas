@@ -15,7 +15,7 @@ export default async function AdminUsersPage() {
   });
 
   return (
-    <div className="panel overflow-x-auto">
+    <div className="panel overflow-x-auto overscroll-x-contain">
       <table className="w-full min-w-[640px] text-sm">
         <thead>
           <tr className="border-b border-line text-left text-xs text-slate">

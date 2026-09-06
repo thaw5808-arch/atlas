@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Spectral } from "next/font/google";
 import { ContourField } from "@/components/contour-field";
+import { ScrollReset } from "@/components/scroll-reset";
 import { SiteNav } from "@/components/site-nav";
 import { getCurrentUser } from "@/lib/session";
 import { prisma } from "@/lib/db";
@@ -40,11 +41,21 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="min-h-dvh">
         <ContourField />
         <SiteNav user={user ? { name: user.name, role: user.role } : null} unreadCount={unreadCount} />
-        {/* Mobile padding clears the fixed compact header (top) and floating tab bar (bottom),
-            both of which grow with the device's safe-area inset — these must scale with them so
-            nothing ever sits underneath. Desktop keeps its own fixed values since that header/nav
-            doesn't use safe-area insets. */}
-        <main className="mx-auto w-full max-w-[1240px] px-4 pt-[calc(4rem_+_env(safe-area-inset-top))] pb-[calc(7rem_+_env(safe-area-inset-bottom))] sm:px-6 lg:pb-16 lg:pt-24">
+        {/* Mobile: <main> is its own fixed, clipped viewport between the compact header (top)
+            and floating tab bar (bottom) — not padding inside a normally-scrolling document.
+            Padding-bottom only ever guarantees clearance at the very end of a page; it does
+            nothing to stop content from passing underneath a translucent fixed bar while
+            scrolling through the middle of a long one, and that's exactly where a dense page
+            (weight-priority controls, a 60-row admin table) puts its interactive rows. Clipping
+            <main>'s own box to the safe zone between the two bars means content can never occupy
+            those screen pixels at all, at any scroll position — not just at rest. The clip
+            bounds grow with the safe-area inset so they always clear the real header/nav height.
+            Desktop is unchanged: normal document flow, floating pill header/main padding. */}
+        <main
+          id="app-main"
+          className="fixed inset-x-0 top-[calc(4rem_+_env(safe-area-inset-top))] bottom-[calc(7rem_+_env(safe-area-inset-bottom))] mx-auto w-full max-w-[1240px] overflow-y-auto overscroll-contain px-4 pt-4 pb-6 sm:px-6 lg:static lg:inset-auto lg:overflow-visible lg:overscroll-auto lg:pb-16 lg:pt-24"
+        >
+          <ScrollReset />
           {children}
         </main>
       </body>
