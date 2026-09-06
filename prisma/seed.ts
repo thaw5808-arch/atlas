@@ -14,6 +14,11 @@ const prisma = new PrismaClient();
 
 async function reset() {
   await prisma.$transaction([
+    // AuditLog is append-only at the database level (see the migration in
+    // prisma/migrations/20260906050000_audit_log_append_only) — a fresh seed
+    // is the one deliberate exception, wiping it along with everything else.
+    // This flag only ever gets set here; nothing in the app sets it.
+    prisma.$executeRawUnsafe(`SET LOCAL atlas.allow_audit_log_mutation = 'true'`),
     prisma.auditLog.deleteMany(),
     prisma.verificationRecord.deleteMany(),
     prisma.correctionRequest.deleteMany(),

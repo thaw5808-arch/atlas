@@ -12,9 +12,16 @@ npm install                 # runs prisma generate via postinstall
 cp .env.example .env        # add a Postgres URL and a session secret
 openssl rand -base64 32     # → SESSION_SECRET
 npm run db:push             # sync the schema
+npm run db:migrate          # apply prisma/migrations (the AuditLog append-only guard)
 npm run db:seed             # sample dataset + demo accounts
 npm run dev
 ```
+
+`db:push` and `db:migrate` are both needed: the schema itself is synced with `db push` (no migration
+history), but the one thing that can't be expressed in `schema.prisma` — the trigger that makes
+`AuditLog` append-only, below — lives in `prisma/migrations` and is applied separately. `npm run
+build` runs `prisma migrate deploy` before `next build`, so it's also applied automatically on
+every deploy.
 
 Demo logins (all `password123`):
 
@@ -56,6 +63,12 @@ sourced records before this is used for real decisions.
 The schema carries source, collection date, last-verified date and verification status on tuition,
 living-cost, admission and language records, and every administrative change writes an `AuditLog`
 row with the previous and new value.
+
+`AuditLog` is append-only: application code only ever inserts into it, and a database trigger
+(`prisma/migrations/20260906050000_audit_log_append_only`) enforces that — any `UPDATE` or `DELETE`
+against the table is rejected outright, from any client, not just Prisma. The only exception is the
+seed script's `reset()`, which sets a session-local flag before wiping the table for a fresh seed;
+nothing else ever sets that flag.
 
 ## Built
 
