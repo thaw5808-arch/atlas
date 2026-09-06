@@ -35,6 +35,7 @@ async function reset() {
     prisma.languageQualification.deleteMany(),
     prisma.studentProfile.deleteMany(),
     prisma.session.deleteMany(),
+    prisma.loginAttempt.deleteMany(),
     prisma.scholarshipRequirement.deleteMany(),
     prisma.scholarship.deleteMany(),
     prisma.livingCostRecord.deleteMany(),

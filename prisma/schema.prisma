@@ -52,6 +52,20 @@ model Session {
   @@index([userId])
 }
 
+// Every login attempt, success or failure — not just this user's, since the
+// email may not belong to any account. Backs rate limiting in auth.ts: 10
+// failed attempts in 15 minutes locks out by email and separately by IP.
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  email     String
+  ip        String
+  success   Boolean
+  createdAt DateTime @default(now())
+
+  @@index([email, createdAt])
+  @@index([ip, createdAt])
+}
+
 // ───────────────────────────── student profile ──────────────────────────
 
 enum EducationLevel {

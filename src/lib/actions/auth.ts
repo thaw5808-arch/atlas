@@ -4,9 +4,13 @@ import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "../db";
+import { getClientIp, isLoginRateLimited, recordLoginAttempt } from "../rate-limit";
 import { createSession, defaultDestination, destroySession, safeReturnTo } from "../session";
 
 const DUMMY_HASH = "$2b$12$Q9y6b4o1XZq0m8m2Y9m2ne8m0mQyq2n1lJ5nGkq0V6m5wQx0V1u2K";
+// Reused for both "wrong credentials" and "rate limited" so neither response
+// leaks which of those actually happened, let alone whether the account exists.
+const GENERIC_ERROR = "Those details don't match an account";
 
 export type AuthState = { error?: string } | null;
 
@@ -64,11 +68,23 @@ export async function login(_state: AuthState, formData: FormData): Promise<Auth
   });
   if (!parsed.success) return { error: "Enter your email address and password" };
 
-  const user = await prisma.user.findUnique({ where: { email: parsed.data.email.toLowerCase() } });
+  const email = parsed.data.email.toLowerCase();
+  const ip = await getClientIp();
+
+  // Checked, and every attempt recorded, before the credentials are even
+  // looked at — an attacker hammering a locked-out email or IP keeps
+  // refreshing the 15-minute window rather than being able to wait it out.
+  if (await isLoginRateLimited(email, ip)) {
+    await recordLoginAttempt(email, ip, false);
+    return { error: GENERIC_ERROR };
+  }
+
+  const user = await prisma.user.findUnique({ where: { email } });
   // Compare against a dummy hash when the user is missing so the response time
   // does not reveal which addresses have accounts.
   const valid = await bcrypt.compare(parsed.data.password, user?.passwordHash ?? DUMMY_HASH);
-  if (!user || !valid) return { error: "Those details don't match an account" };
+  await recordLoginAttempt(email, ip, Boolean(user) && valid);
+  if (!user || !valid) return { error: GENERIC_ERROR };
 
   await createSession(user.id);
   const returnTo = safeReturnTo(formData.get("returnTo"));
