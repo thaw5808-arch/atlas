@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Spectral } from "next/font/google";
 import { ContourField } from "@/components/contour-field";
-import { ScrollReset } from "@/components/scroll-reset";
+import { ScrollManager } from "@/components/scroll-manager";
 import { SiteNav } from "@/components/site-nav";
 import { getCurrentUser } from "@/lib/session";
 import { prisma } from "@/lib/db";
@@ -55,7 +55,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           id="app-main"
           className="fixed inset-x-0 top-[calc(4rem_+_env(safe-area-inset-top))] bottom-[calc(7rem_+_env(safe-area-inset-bottom))] mx-auto w-full max-w-[1240px] overflow-y-auto overscroll-contain px-4 pt-4 pb-6 sm:px-6 lg:static lg:inset-auto lg:overflow-visible lg:overscroll-auto lg:pb-16 lg:pt-24"
         >
-          <ScrollReset />
+          <ScrollManager />
           {children}
         </main>
       </body>

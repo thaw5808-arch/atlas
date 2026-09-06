@@ -210,6 +210,23 @@
     text-underline-offset: 3px;
     text-decoration-color: color-mix(in oklab, var(--color-viridian) 45%, transparent);
   }
+
+  /* Briefly flashes an element that was just scrolled to via a #fragment deep link, so it's
+     obvious which one was linked to. Applied/removed by ScrollManager. */
+  .hash-target {
+    animation: hash-target-flash 1.8s ease-out;
+  }
+}
+
+@keyframes hash-target-flash {
+  from {
+    background-color: var(--color-viridian-soft);
+    box-shadow: 0 0 0 2px var(--color-viridian);
+  }
+  to {
+    background-color: var(--color-surface);
+    box-shadow: 0 0 0 2px transparent;
+  }
 }
 
 /* Topographic ground the glass has something to blur. */
