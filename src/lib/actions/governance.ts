@@ -271,8 +271,51 @@ export async function updateUserRole(userId: string, role: string) {
         newValue: parsed.data,
       },
     });
+
+    // Losing the REPRESENTATIVE role should not leave a VERIFIED claim
+    // behind — the representatives screen would keep showing them as
+    // verified for a university even though their role now says otherwise.
+    if (target.role === "REPRESENTATIVE" && parsed.data !== "REPRESENTATIVE") {
+      const representative = await tx.universityRepresentative.findUnique({ where: { userId } });
+      if (representative && representative.status === "VERIFIED") {
+        await tx.universityRepresentative.update({
+          where: { id: representative.id },
+          data: { status: "REVOKED", reviewedAt: new Date() },
+        });
+        await tx.auditLog.create({
+          data: {
+            actorId: admin.id,
+            entityType: "UniversityRepresentative",
+            entityId: representative.id,
+            action: "revoke",
+            field: "status",
+            previousValue: "VERIFIED",
+            newValue: "REVOKED",
+          },
+        });
+
+        const remainingVerified = await tx.universityRepresentative.count({
+          where: { universityId: representative.universityId, status: "VERIFIED" },
+        });
+        if (remainingVerified === 0) {
+          await tx.university.update({ where: { id: representative.universityId }, data: { claimed: false } });
+          await tx.auditLog.create({
+            data: {
+              actorId: admin.id,
+              entityType: "University",
+              entityId: representative.universityId,
+              action: "update",
+              field: "claimed",
+              previousValue: "true",
+              newValue: "false",
+            },
+          });
+        }
+      }
+    }
   });
 
   revalidatePath("/admin/data/users");
+  revalidatePath("/admin/representatives");
   return {};
 }
