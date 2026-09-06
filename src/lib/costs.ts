@@ -187,18 +187,24 @@ export function computeScenario(input: ScenarioInput): ScenarioResult {
     .reduce((sum, line) => sum + line.amountPerYear, 0);
   const annualFundingWithWork = annualFundingGuaranteed + workIncome;
 
+  // Round once here, then derive totalDegreeCost/totalGap from these rounded annual figures
+  // rather than the raw pre-rounding sums — otherwise multiplying by durationYears can land a
+  // cent away from the reported annualCost/annualGap times duration.
+  const roundedAnnualCost = round(annualCost);
+  const roundedAnnualGap = round(annualCost - annualFundingGuaranteed);
+
   return {
     currency: input.currency,
     costLines,
     fundingLines,
-    annualCost: round(annualCost),
-    monthlyCost: round(annualCost / 12),
-    totalDegreeCost: round(annualCost * input.durationYears),
+    annualCost: roundedAnnualCost,
+    monthlyCost: round(roundedAnnualCost / 12),
+    totalDegreeCost: round(roundedAnnualCost * input.durationYears),
     annualFundingGuaranteed: round(annualFundingGuaranteed),
     annualFundingWithWork: round(annualFundingWithWork),
-    annualGap: round(annualCost - annualFundingGuaranteed),
+    annualGap: roundedAnnualGap,
     annualGapWithWork: round(annualCost - annualFundingWithWork),
-    totalGap: round((annualCost - annualFundingGuaranteed) * input.durationYears),
+    totalGap: round(roundedAnnualGap * input.durationYears),
     workIncome: round(workIncome),
     breakdown: {
       tuitionAndFees: round(

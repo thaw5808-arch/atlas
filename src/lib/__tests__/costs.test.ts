@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { annualFundingCapacity, computeScenario, WHAT_IF_PRESETS, type ScenarioInput } from "@/lib/costs";
 
+// Mirrors the rounding rule computeScenario uses internally (round to the cent). Used to state
+// "reconciles exactly with X * duration" expectations without tripping over raw floating-point
+// multiplication noise that a plain `toBe` on the unrounded product would surface spuriously.
+const round = (value: number) => Math.round(value * 100) / 100;
+
 // ─────────────────────────── fixtures ───────────────────────────
 
 function baseInput(overrides: Partial<ScenarioInput> = {}): ScenarioInput {
@@ -64,18 +69,19 @@ describe("computeScenario — annual and total-degree arithmetic", () => {
 
   it("derives monthly cost and total degree cost from the annual figure", () => {
     const result = computeScenario(baseInput());
-    expect(result.monthlyCost).toBeCloseTo(2416.67, 2);
-    expect(result.totalDegreeCost).toBeCloseTo(29000 * 4, 1);
+    expect(result.monthlyCost).toBe(2416.67);
+    expect(result.totalDegreeCost).toBe(round(29000 * 4));
   });
 
-  it("scales total degree cost with duration independently of annual cost", () => {
+  it("scales total degree cost with duration, reconciling exactly with the reported annual cost", () => {
     const twoYear = computeScenario(baseInput({ durationYears: 2 }));
     const sixYear = computeScenario(baseInput({ durationYears: 6 }));
-    // Admission fee spreads differently, so annual cost differs slightly, but the multiplication
-    // by duration is still (within a rounding cent) exact for each — totalDegreeCost is derived
-    // from the pre-rounding annual total, so it can be a cent off from annualCost * duration.
-    expect(twoYear.totalDegreeCost).toBeCloseTo(twoYear.annualCost * 2, 1);
-    expect(sixYear.totalDegreeCost).toBeCloseTo(sixYear.annualCost * 6, 1);
+    // totalDegreeCost is derived from the already-rounded annualCost, so it must reconcile
+    // exactly (to the cent) with annualCost * duration — not merely land close to it. The
+    // expected side is put through the same cent-rounding the source applies, since raw
+    // floating-point multiplication alone carries sub-cent noise.
+    expect(twoYear.totalDegreeCost).toBe(round(twoYear.annualCost * 2));
+    expect(sixYear.totalDegreeCost).toBe(round(sixYear.annualCost * 6));
   });
 
   it("splits housing (and only housing) by roommate count", () => {
@@ -204,12 +210,13 @@ describe("computeScenario — gap calculation", () => {
     expect(result.annualGapWithWork).toBeLessThan(result.annualGap);
   });
 
-  it("computes total gap as annualGap * durationYears (within a rounding cent)", () => {
-    // totalGap is derived from the pre-rounding annual figures, so it can land a cent away
-    // from the already-rounded annualGap * duration.
+  it("computes total gap as annualGap * durationYears exactly", () => {
+    // totalGap is derived from the already-rounded annualGap, so it must reconcile exactly
+    // (to the cent) with annualGap * duration — modulo the same cent-rounding the source
+    // applies, since raw floating-point multiplication alone carries sub-cent noise.
     const input = baseInput({ durationYears: 3 });
     const result = computeScenario(input);
-    expect(result.totalGap).toBeCloseTo(result.annualGap * 3, 1);
+    expect(result.totalGap).toBe(round(result.annualGap * 3));
   });
 
   it("can report a negative gap (surplus) when guaranteed funding exceeds cost", () => {

@@ -418,6 +418,18 @@ describe("scoreScholarship", () => {
     expect(required.score).toBe(10);
   });
 
+  it("raises a blocker when a scholarship is required and the university has no recorded scholarships at all", () => {
+    // This is the case a scholarship-dependent student most needs flagged: zero-scholarship
+    // universities must not short-circuit past the required-scholarship check.
+    const required = scoreScholarship(
+      student({ scholarshipRequired: true, minScholarshipPercent: 50 }),
+      candidate({ scholarships: [] }),
+    );
+    const notRequired = scoreScholarship(student({ scholarshipRequired: false }), candidate({ scholarships: [] }));
+    expect(required.reasons.some((r) => r.kind === "blocker")).toBe(true);
+    expect(notRequired.reasons.some((r) => r.kind === "blocker")).toBe(false);
+  });
+
   it("scores the effective-coverage curve at its documented boundaries", () => {
     const at = (eligiblePct: number) =>
       scoreScholarship(
@@ -551,13 +563,12 @@ describe("scoreCandidate", () => {
 
   it("caps more aggressively as blockers accumulate, flattening out at 4+", () => {
     // Three independent blocker sources: academic (GPA below minimum), language (missing
-    // required test with no alternative on file), and scholarship (required but no recorded
-    // award reaches the student's minimum — needs at least one scholarship on file, since a
-    // university with zero recorded scholarships short-circuits to a concern instead).
+    // required test with no alternative on file), and scholarship (required, and this
+    // university has none recorded at all).
     const threeBlockers = candidate({
       requirement: { minGpa: 3.9, gpaScale: 4, minEducationLevel: "HIGH_SCHOOL" },
       languageRequirements: [{ test: "IELTS", minScore: 9, waivable: false }],
-      scholarships: [{ name: "Small award", eligibility: "ELIGIBLE", coveragePercent: 10 }],
+      scholarships: [],
     });
     const result = scoreCandidate(
       student({

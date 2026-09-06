@@ -443,34 +443,40 @@ export function scoreScholarship(student: StudentInput, candidate: CandidateInpu
 
   const eligible = candidate.scholarships.filter((s) => s.eligibility === "ELIGIBLE");
   const possible = candidate.scholarships.filter((s) => s.eligibility === "POSSIBLE");
+  const bestEligible = eligible.reduce((max, s) => Math.max(max, s.coveragePercent), 0);
+  const bestPossible = possible.reduce((max, s) => Math.max(max, s.coveragePercent), 0);
+
+  let score: number;
 
   if (candidate.scholarships.length === 0) {
     push("concern", "No scholarships for international students are recorded for this university yet");
-    return { score: student.scholarshipRequired ? 10 : 30, reasons };
+    score = student.scholarshipRequired ? 10 : 30;
+  } else {
+    const effective = bestEligible + bestPossible * 0.5;
+
+    score = curve(effective, [
+      [0, 20],
+      [15, 45],
+      [30, 68],
+      [60, 88],
+      [100, 100],
+    ]);
+
+    if (eligible.length > 0) {
+      push("strength", `You currently meet the listed criteria for ${eligible.length} award${eligible.length > 1 ? "s" : ""}, the largest covering about ${Math.round(bestEligible)}% of annual cost`);
+    }
+    if (possible.length > 0) {
+      push("concern", `${possible.length} further award${possible.length > 1 ? "s" : ""} need details you haven't filled in yet`);
+    }
+    if (eligible.length === 0 && possible.length === 0) {
+      push("concern", "You don't currently meet the listed criteria for any recorded award here");
+      score = Math.min(score, 25);
+    }
   }
 
-  const bestEligible = eligible.reduce((max, s) => Math.max(max, s.coveragePercent), 0);
-  const bestPossible = possible.reduce((max, s) => Math.max(max, s.coveragePercent), 0);
-  const effective = bestEligible + bestPossible * 0.5;
-
-  let score = curve(effective, [
-    [0, 20],
-    [15, 45],
-    [30, 68],
-    [60, 88],
-    [100, 100],
-  ]);
-
-  if (eligible.length > 0) {
-    push("strength", `You currently meet the listed criteria for ${eligible.length} award${eligible.length > 1 ? "s" : ""}, the largest covering about ${Math.round(bestEligible)}% of annual cost`);
-  }
-  if (possible.length > 0) {
-    push("concern", `${possible.length} further award${possible.length > 1 ? "s" : ""} need details you haven't filled in yet`);
-  }
-  if (eligible.length === 0 && possible.length === 0) {
-    push("concern", "You don't currently meet the listed criteria for any recorded award here");
-    score = Math.min(score, 25);
-  }
+  // A scholarship-dependent student is blocked whether the shortfall is because no award here
+  // reaches their minimum, or because the university has no recorded awards at all — the latter
+  // must not slip through just because the early return above never touched bestEligible.
   if (student.scholarshipRequired && bestEligible < (student.minScholarshipPercent ?? 1)) {
     push("blocker", `You marked a scholarship as essential, and no award here reaches the ${student.minScholarshipPercent ?? 0}% you need`);
   }
