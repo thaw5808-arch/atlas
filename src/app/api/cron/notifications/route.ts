@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { verifyCronRequest } from "@/lib/cron";
 import { formatDate } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -16,16 +17,9 @@ type Candidate = {
   body: string;
 };
 
-function unauthorized() {
-  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-}
-
 export async function GET(request: Request) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return NextResponse.json({ error: "CRON_SECRET is not configured" }, { status: 500 });
-
-  const auth = request.headers.get("authorization");
-  if (auth !== `Bearer ${secret}`) return unauthorized();
+  const authError = verifyCronRequest(request);
+  if (authError) return authError;
 
   const now = new Date();
   const windowEnd = new Date(now.getTime() + REMINDER_WINDOW_DAYS * 24 * 60 * 60 * 1000);
