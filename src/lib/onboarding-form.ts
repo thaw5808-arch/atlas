@@ -86,6 +86,28 @@ export function toNumberOrNull(value: string): number | null {
   return Number.isNaN(parsed) ? null : parsed;
 }
 
+/**
+ * Constrains a keystroke's raw text to characters a number can eventually be
+ * made of, while still leaving it as text so a value mid-entry — "3.", ".5",
+ * or "" — can exist in state without being coerced. Keeps digits, at most one
+ * decimal point, and (only when `allowNegative`) a single leading minus.
+ */
+export function sanitizeNumericText(raw: string, { allowNegative = false } = {}): string {
+  let negative = false;
+  let value = raw;
+
+  if (allowNegative && value.trimStart().startsWith("-")) negative = true;
+
+  value = value.replace(/[^0-9.]/g, "");
+
+  const firstDot = value.indexOf(".");
+  if (firstDot !== -1) {
+    value = value.slice(0, firstDot + 1) + value.slice(firstDot + 1).replace(/\./g, "");
+  }
+
+  return negative ? `-${value}` : value;
+}
+
 export function buildFormState(initial: Partial<OnboardingPayload>): OnboardingFormState {
   return {
     ...DEFAULT_STATE,

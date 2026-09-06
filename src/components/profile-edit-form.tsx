@@ -15,7 +15,7 @@ import {
   Pills,
   TESTS,
 } from "@/components/onboarding-wizard";
-import { buildFormState, toPayload, type OnboardingFormState } from "@/lib/onboarding-form";
+import { buildFormState, sanitizeNumericText, toPayload, type OnboardingFormState } from "@/lib/onboarding-form";
 import { SectionHeading } from "@/components/ui";
 
 export function ProfileEditForm({
@@ -186,7 +186,7 @@ export function ProfileEditForm({
                 inputMode="decimal"
                 placeholder="3.45"
                 value={form.gpa}
-                onChange={(event) => patch({ gpa: event.target.value })}
+                onChange={(event) => patch({ gpa: sanitizeNumericText(event.target.value) })}
               />
             </Field>
             <Field label="Out of">
@@ -194,7 +194,7 @@ export function ProfileEditForm({
                 className="input"
                 inputMode="decimal"
                 value={form.gpaScale}
-                onChange={(event) => patch({ gpaScale: event.target.value })}
+                onChange={(event) => patch({ gpaScale: sanitizeNumericText(event.target.value) })}
               />
             </Field>
           </div>
@@ -217,7 +217,7 @@ export function ProfileEditForm({
                       setLanguage(
                         test.value,
                         test.kind === "score"
-                          ? { score: event.target.value }
+                          ? { score: sanitizeNumericText(event.target.value) }
                           : { band: event.target.value.toUpperCase() || null },
                       )
                     }
@@ -254,7 +254,7 @@ export function ProfileEditForm({
                 className="input"
                 inputMode="numeric"
                 value={form.annualFamilyBudget}
-                onChange={(event) => patch({ annualFamilyBudget: event.target.value })}
+                onChange={(event) => patch({ annualFamilyBudget: sanitizeNumericText(event.target.value) })}
               />
             </Field>
             <Field label="Savings available in total">
@@ -262,7 +262,7 @@ export function ProfileEditForm({
                 className="input"
                 inputMode="numeric"
                 value={form.availableSavings}
-                onChange={(event) => patch({ availableSavings: event.target.value })}
+                onChange={(event) => patch({ availableSavings: sanitizeNumericText(event.target.value) })}
               />
             </Field>
             <Field label="Other support per year" optional>
@@ -270,7 +270,7 @@ export function ProfileEditForm({
                 className="input"
                 inputMode="numeric"
                 value={form.expectedSupport}
-                onChange={(event) => patch({ expectedSupport: event.target.value })}
+                onChange={(event) => patch({ expectedSupport: sanitizeNumericText(event.target.value) })}
               />
             </Field>
           </div>
@@ -280,7 +280,7 @@ export function ProfileEditForm({
                 className="input"
                 inputMode="numeric"
                 value={form.maxTuitionPerYear}
-                onChange={(event) => patch({ maxTuitionPerYear: event.target.value })}
+                onChange={(event) => patch({ maxTuitionPerYear: sanitizeNumericText(event.target.value) })}
               />
             </Field>
             <Field label="Most you would spend on living costs per year" optional>
@@ -288,7 +288,7 @@ export function ProfileEditForm({
                 className="input"
                 inputMode="numeric"
                 value={form.maxLivingCostPerYear}
-                onChange={(event) => patch({ maxLivingCostPerYear: event.target.value })}
+                onChange={(event) => patch({ maxLivingCostPerYear: sanitizeNumericText(event.target.value) })}
               />
             </Field>
           </div>
@@ -306,7 +306,7 @@ export function ProfileEditForm({
                 className="input"
                 inputMode="numeric"
                 value={form.minScholarshipPercent}
-                onChange={(event) => patch({ minScholarshipPercent: event.target.value })}
+                onChange={(event) => patch({ minScholarshipPercent: sanitizeNumericText(event.target.value) })}
               />
             </Field>
           )}
