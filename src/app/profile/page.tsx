@@ -45,7 +45,7 @@ export default async function ProfilePage() {
         <SectionHeading
           title="Your profile"
           action={
-            <Link href="/onboarding" className="btn btn-sm">
+            <Link href="/profile/edit" className="btn btn-sm">
               Edit
             </Link>
           }

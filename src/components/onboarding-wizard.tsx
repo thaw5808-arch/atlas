@@ -7,9 +7,9 @@ import { saveOnboarding, type OnboardingPayload } from "@/lib/actions/profile";
 import { CURRENCIES } from "@/lib/money";
 import { IMPORTANCE_WEIGHT, type Importance } from "@/lib/decision";
 
-type Option = { value: string; label: string };
+export type Option = { value: string; label: string };
 
-const EDUCATION: Option[] = [
+export const EDUCATION: Option[] = [
   { value: "HIGH_SCHOOL", label: "High school" },
   { value: "FOUNDATION", label: "Foundation year" },
   { value: "DIPLOMA", label: "Diploma" },
@@ -18,9 +18,9 @@ const EDUCATION: Option[] = [
   { value: "DOCTORATE", label: "Doctorate" },
 ];
 
-const DEGREES: Option[] = EDUCATION.filter((option) => option.value !== "HIGH_SCHOOL");
+export const DEGREES: Option[] = EDUCATION.filter((option) => option.value !== "HIGH_SCHOOL");
 
-const INTAKES: Option[] = [
+export const INTAKES: Option[] = [
   { value: "SPRING", label: "Spring" },
   { value: "SUMMER", label: "Summer" },
   { value: "AUTUMN", label: "Autumn" },
@@ -28,14 +28,14 @@ const INTAKES: Option[] = [
   { value: "ROLLING", label: "Any / rolling" },
 ];
 
-const ENVIRONMENTS: Option[] = [
+export const ENVIRONMENTS: Option[] = [
   { value: "MAJOR_METRO", label: "Large city" },
   { value: "MID_SIZED_CITY", label: "Mid-sized city" },
   { value: "UNIVERSITY_TOWN", label: "University town" },
   { value: "NO_PREFERENCE", label: "No preference" },
 ];
 
-const TESTS: { value: string; label: string; kind: "score" | "band"; hint: string }[] = [
+export const TESTS: { value: string; label: string; kind: "score" | "band"; hint: string }[] = [
   { value: "IELTS", label: "IELTS", kind: "score", hint: "e.g. 6.5" },
   { value: "TOEFL_IBT", label: "TOEFL iBT", kind: "score", hint: "e.g. 88" },
   { value: "DUOLINGO", label: "Duolingo English Test", kind: "score", hint: "e.g. 115" },
@@ -496,7 +496,7 @@ export function OnboardingWizard({
   );
 }
 
-function Field({
+export function Field({
   label,
   optional,
   children,
@@ -516,7 +516,7 @@ function Field({
   );
 }
 
-function Pills({
+export function Pills({
   options,
   value,
   onChange,
