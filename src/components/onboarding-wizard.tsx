@@ -3,9 +3,10 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Check, ChevronLeft, ChevronRight } from "lucide-react";
-import { saveOnboarding, type OnboardingPayload } from "@/lib/actions/profile";
+import { type OnboardingPayload, saveOnboarding } from "@/lib/actions/profile";
 import { CURRENCIES } from "@/lib/money";
 import { IMPORTANCE_WEIGHT, type Importance } from "@/lib/decision";
+import { buildFormState, toPayload, type OnboardingFormState } from "@/lib/onboarding-form";
 
 export type Option = { value: string; label: string };
 
@@ -74,28 +75,23 @@ export function OnboardingWizard({
   const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const [form, setForm] = useState<OnboardingPayload>({
-    preferredCountries: [],
-    preferredEnvironment: "NO_PREFERENCE",
-    languages: [],
-    budgetCurrency: "USD",
-    scholarshipRequired: false,
-    willingToWorkPartTime: false,
-    gpaScale: 4,
-    weights: {
-      financial: "VERY_HIGH",
-      academic: "HIGH",
-      language: "HIGH",
-      location: "MEDIUM",
-      scholarship: "HIGH",
-      career: "MEDIUM",
-      ranking: "LOW",
-    },
-    ...initial,
+  const [form, setForm] = useState<OnboardingFormState>(() => {
+    const base = buildFormState(initial);
+    return {
+      ...base,
+      weights: base.weights ?? {
+        financial: "VERY_HIGH",
+        academic: "HIGH",
+        language: "HIGH",
+        location: "MEDIUM",
+        scholarship: "HIGH",
+        career: "MEDIUM",
+        ranking: "LOW",
+      },
+    };
   });
 
-  const patch = (values: Partial<OnboardingPayload>) => setForm((current) => ({ ...current, ...values }));
-  const number = (value: string) => (value.trim() === "" ? null : Number(value));
+  const patch = (values: Partial<OnboardingFormState>) => setForm((current) => ({ ...current, ...values }));
 
   const toggleCountry = (code: string) => {
     const current = form.preferredCountries ?? [];
@@ -106,23 +102,23 @@ export function OnboardingWizard({
     });
   };
 
-  const setLanguage = (test: string, patchValue: { score?: number | null; band?: string | null }) => {
-    const current = form.languages ?? [];
+  const setLanguage = (test: string, patchValue: { score?: string; band?: string | null }) => {
+    const current = form.languages;
     const existing = current.find((entry) => entry.test === test);
     const next = existing
       ? current.map((entry) => (entry.test === test ? { ...entry, ...patchValue } : entry))
-      : [...current, { test: test as never, ...patchValue }];
+      : [...current, { test, score: "", band: null, ...patchValue }];
     patch({
-      languages: next.filter((entry) => entry.score != null || (entry.band ?? "").length > 0),
+      languages: next.filter((entry) => entry.score.trim().length > 0 || (entry.band ?? "").trim().length > 0),
     });
   };
 
-  const languageValue = (test: string) => (form.languages ?? []).find((entry) => entry.test === test);
+  const languageValue = (test: string) => form.languages.find((entry) => entry.test === test);
 
   const submit = () => {
     setError(null);
     startTransition(async () => {
-      const result = await saveOnboarding(form);
+      const result = await saveOnboarding(toPayload(form));
       if (result.error) setError(result.error);
       else router.push("/dashboard");
     });
@@ -261,16 +257,16 @@ export function OnboardingWizard({
                   className="input"
                   inputMode="decimal"
                   placeholder="3.45"
-                  value={form.gpa ?? ""}
-                  onChange={(event) => patch({ gpa: number(event.target.value) })}
+                  value={form.gpa}
+                  onChange={(event) => patch({ gpa: event.target.value })}
                 />
               </Field>
               <Field label="Out of">
                 <input
                   className="input"
                   inputMode="decimal"
-                  value={form.gpaScale ?? 4}
-                  onChange={(event) => patch({ gpaScale: number(event.target.value) })}
+                  value={form.gpaScale}
+                  onChange={(event) => patch({ gpaScale: event.target.value })}
                 />
               </Field>
             </div>
@@ -293,7 +289,7 @@ export function OnboardingWizard({
                         setLanguage(
                           test.value,
                           test.kind === "score"
-                            ? { score: number(event.target.value) }
+                            ? { score: event.target.value }
                             : { band: event.target.value.toUpperCase() || null },
                         )
                       }
@@ -328,24 +324,24 @@ export function OnboardingWizard({
                 <input
                   className="input"
                   inputMode="numeric"
-                  value={form.annualFamilyBudget ?? ""}
-                  onChange={(event) => patch({ annualFamilyBudget: number(event.target.value) })}
+                  value={form.annualFamilyBudget}
+                  onChange={(event) => patch({ annualFamilyBudget: event.target.value })}
                 />
               </Field>
               <Field label="Savings available in total">
                 <input
                   className="input"
                   inputMode="numeric"
-                  value={form.availableSavings ?? ""}
-                  onChange={(event) => patch({ availableSavings: number(event.target.value) })}
+                  value={form.availableSavings}
+                  onChange={(event) => patch({ availableSavings: event.target.value })}
                 />
               </Field>
               <Field label="Other support per year" optional>
                 <input
                   className="input"
                   inputMode="numeric"
-                  value={form.expectedSupport ?? ""}
-                  onChange={(event) => patch({ expectedSupport: number(event.target.value) })}
+                  value={form.expectedSupport}
+                  onChange={(event) => patch({ expectedSupport: event.target.value })}
                 />
               </Field>
             </div>
@@ -354,23 +350,23 @@ export function OnboardingWizard({
                 <input
                   className="input"
                   inputMode="numeric"
-                  value={form.maxTuitionPerYear ?? ""}
-                  onChange={(event) => patch({ maxTuitionPerYear: number(event.target.value) })}
+                  value={form.maxTuitionPerYear}
+                  onChange={(event) => patch({ maxTuitionPerYear: event.target.value })}
                 />
               </Field>
               <Field label="Most you would spend on living costs per year" optional>
                 <input
                   className="input"
                   inputMode="numeric"
-                  value={form.maxLivingCostPerYear ?? ""}
-                  onChange={(event) => patch({ maxLivingCostPerYear: number(event.target.value) })}
+                  value={form.maxLivingCostPerYear}
+                  onChange={(event) => patch({ maxLivingCostPerYear: event.target.value })}
                 />
               </Field>
             </div>
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
-                checked={form.scholarshipRequired ?? false}
+                checked={form.scholarshipRequired}
                 onChange={(event) => patch({ scholarshipRequired: event.target.checked })}
               />
               I can only go if I receive a scholarship
@@ -380,8 +376,8 @@ export function OnboardingWizard({
                 <input
                   className="input"
                   inputMode="numeric"
-                  value={form.minScholarshipPercent ?? ""}
-                  onChange={(event) => patch({ minScholarshipPercent: number(event.target.value) })}
+                  value={form.minScholarshipPercent}
+                  onChange={(event) => patch({ minScholarshipPercent: event.target.value })}
                 />
               </Field>
             )}
