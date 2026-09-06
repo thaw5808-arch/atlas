@@ -198,9 +198,22 @@ export async function reviewRepresentative(representativeId: string, decision: "
   return {};
 }
 
-export async function verifyRecord(entityType: "TuitionRecord" | "LivingCostRecord", entityId: string) {
+const VERIFIABLE_MODELS = {
+  TuitionRecord: "tuitionRecord",
+  LivingCostRecord: "livingCostRecord",
+  Scholarship: "scholarship",
+} as const;
+
+export type VerifiableEntityType = keyof typeof VERIFIABLE_MODELS;
+
+export async function verifyRecord(entityType: VerifiableEntityType, entityId: string) {
   const admin = await requireRole("ADMIN");
-  const model = entityType === "TuitionRecord" ? prisma.tuitionRecord : prisma.livingCostRecord;
+  const model = prisma[VERIFIABLE_MODELS[entityType]];
+  const before = (await (model as typeof prisma.tuitionRecord).findUnique({ where: { id: entityId } })) as
+    | { verification: string }
+    | null;
+  if (!before) return { error: "That record no longer exists" };
+
   await (model as typeof prisma.tuitionRecord).update({
     where: { id: entityId },
     data: { verification: "VERIFIED", lastVerifiedAt: new Date() },
@@ -208,8 +221,10 @@ export async function verifyRecord(entityType: "TuitionRecord" | "LivingCostReco
   await prisma.verificationRecord.create({
     data: { entityType, entityId, status: "VERIFIED", verifiedById: admin.id },
   });
-  await audit(admin.id, entityType, entityId, "verify", "verification", undefined, "VERIFIED");
+  await audit(admin.id, entityType, entityId, "verify", "verification", before.verification, "VERIFIED");
   revalidatePath("/admin/data");
+  revalidatePath("/admin/data/living-costs");
+  revalidatePath("/admin/data/scholarships");
   return {};
 }
 
@@ -228,5 +243,36 @@ export async function claimUniversity(universityId: string, workEmail: string, j
   });
   revalidatePath("/portal");
   revalidatePath("/portal/claim");
+  return {};
+}
+
+export async function updateUserRole(userId: string, role: string) {
+  const admin = await requireRole("ADMIN");
+  const parsed = z.enum(["STUDENT", "REPRESENTATIVE", "ADMIN"]).safeParse(role);
+  if (!parsed.success) return { error: "Not a valid role" };
+
+  // Stops an admin from demoting themselves out of the admin section.
+  if (userId === admin.id) return { error: "You can't change your own role" };
+
+  const target = await prisma.user.findUnique({ where: { id: userId } });
+  if (!target) return { error: "That user no longer exists" };
+  if (target.role === parsed.data) return {};
+
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({ where: { id: userId }, data: { role: parsed.data } });
+    await tx.auditLog.create({
+      data: {
+        actorId: admin.id,
+        entityType: "User",
+        entityId: userId,
+        action: "update",
+        field: "role",
+        previousValue: target.role,
+        newValue: parsed.data,
+      },
+    });
+  });
+
+  revalidatePath("/admin/data/users");
   return {};
 }

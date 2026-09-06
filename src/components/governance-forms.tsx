@@ -1,7 +1,15 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { claimUniversity, proposeChange, resolveCorrection, reviewRepresentative, verifyRecord } from "@/lib/actions/governance";
+import {
+  claimUniversity,
+  proposeChange,
+  resolveCorrection,
+  reviewRepresentative,
+  updateUserRole,
+  verifyRecord,
+  type VerifiableEntityType,
+} from "@/lib/actions/governance";
 
 export function CorrectionDecision({ requestId, applicable }: { requestId: string; applicable: boolean }) {
   const [pending, startTransition] = useTransition();
@@ -51,7 +59,7 @@ export function RepresentativeDecision({ representativeId }: { representativeId:
   );
 }
 
-export function VerifyButton({ entityType, entityId }: { entityType: "TuitionRecord" | "LivingCostRecord"; entityId: string }) {
+export function VerifyButton({ entityType, entityId }: { entityType: VerifiableEntityType; entityId: string }) {
   const [pending, startTransition] = useTransition();
   const [done, setDone] = useState(false);
   return (
@@ -181,6 +189,52 @@ export function ClaimForm({ universities }: { universities: { id: string; name: 
       >
         {pending ? "Submitting…" : "Claim this profile"}
       </button>
+    </div>
+  );
+}
+
+const ROLES = ["STUDENT", "REPRESENTATIVE", "ADMIN"] as const;
+
+export function RoleSelect({
+  userId,
+  role,
+  disabled,
+}: {
+  userId: string;
+  role: string;
+  disabled?: boolean;
+}) {
+  const [pending, startTransition] = useTransition();
+  const [current, setCurrent] = useState(role);
+  const [error, setError] = useState<string | null>(null);
+
+  return (
+    <div className="flex items-center justify-end gap-2">
+      {error && <span className="text-xs text-rust">{error}</span>}
+      <select
+        className="input h-9 w-auto"
+        value={current}
+        disabled={disabled || pending}
+        onChange={(event) => {
+          const next = event.target.value;
+          const previous = current;
+          setCurrent(next);
+          setError(null);
+          startTransition(async () => {
+            const result = await updateUserRole(userId, next);
+            if (result?.error) {
+              setCurrent(previous);
+              setError(result.error);
+            }
+          });
+        }}
+      >
+        {ROLES.map((option) => (
+          <option key={option} value={option}>
+            {option.charAt(0) + option.slice(1).toLowerCase()}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }
