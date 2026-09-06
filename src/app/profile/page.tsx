@@ -85,9 +85,11 @@ export default async function ProfilePage() {
         <Link href="/decision-lab" className="btn">
           Change your priorities
         </Link>
-        <Link href="/portal/claim" className="btn">
-          Representative portal
-        </Link>
+        {user.role !== "ADMIN" && (
+          <Link href={user.role === "REPRESENTATIVE" ? "/portal" : "/portal/claim"} className="btn">
+            Representative portal
+          </Link>
+        )}
         <form action={logout}>
           <button type="submit" className="btn">
             Sign out
