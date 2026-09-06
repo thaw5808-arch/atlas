@@ -203,6 +203,9 @@ export function SiteNav({
                   {link.label}
                 </Link>
               ))}
+              <Link href="/search" onClick={() => setOpen(false)} className="panel flex items-center gap-2 px-3 py-2.5 text-sm">
+                <Search size={16} className="text-viridian" /> Search
+              </Link>
               <Link href="/saved" onClick={() => setOpen(false)} className="panel flex items-center gap-2 px-3 py-2.5 text-sm">
                 <Bookmark size={16} className="text-viridian" /> Saved
               </Link>
