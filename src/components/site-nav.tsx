@@ -120,8 +120,35 @@ export function SiteNav({
         </nav>
       </header>
 
-      {/* Mobile: a compact floating bar, not a shrunken desktop nav. */}
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center px-4 pb-4 lg:hidden">
+      {/* Mobile: a compact edge-to-edge header, since there's no room for the full desktop nav
+          and the bottom tab bar doesn't carry the wordmark or an account control. */}
+      <div className="pointer-events-none fixed inset-x-0 top-0 z-50 lg:hidden">
+        <div className="glass pointer-events-auto flex items-center justify-between rounded-none border-x-0 border-t-0 px-4 pb-2.5 pt-[calc(0.625rem_+_env(safe-area-inset-top))]">
+          <Link href="/" className="font-display text-lg tracking-tight">
+            ATLAS
+          </Link>
+          {user ? (
+            <Link
+              href="/profile"
+              className="btn btn-primary h-8 gap-1.5 pl-1.5 pr-2.5"
+              title={`${user.name} · ${user.role.toLowerCase()}`}
+            >
+              <span className="grid h-5 w-5 place-items-center rounded-full bg-white/15 text-[10px]">
+                {user.name.slice(0, 1).toUpperCase()}
+              </span>
+              <span className="max-w-20 truncate text-xs">{user.name.split(" ")[0]}</span>
+            </Link>
+          ) : (
+            <Link href="/login" className="btn btn-primary h-8 px-3 text-xs">
+              Sign in
+            </Link>
+          )}
+        </div>
+      </div>
+
+      {/* Mobile: a compact floating bar, not a shrunken desktop nav. Its bottom padding adds the
+          safe-area inset on top of the usual gap so it clears the home indicator on iPhones. */}
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center px-4 pb-[calc(1rem_+_env(safe-area-inset-bottom))] lg:hidden">
         <nav className="glass pointer-events-auto flex h-14 w-full max-w-md items-center justify-around rounded-full px-2">
           {[LINKS[0], LINKS[1], LINKS[4], LINKS[6]].map((link) => {
             const Icon = link.icon;
