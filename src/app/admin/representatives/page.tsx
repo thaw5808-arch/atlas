@@ -33,6 +33,11 @@ export default async function RepresentativesPage() {
           </div>
           {representative.status === "PENDING" ? (
             <RepresentativeDecision representativeId={representative.id} />
+          ) : representative.status === "REJECTED" || representative.status === "REVOKED" ? (
+            <div className="flex items-center gap-2">
+              <span className="chip">{representative.status.toLowerCase()}</span>
+              <RepresentativeDecision representativeId={representative.id} showReject={false} />
+            </div>
           ) : (
             <span className="chip">{representative.status.toLowerCase()}</span>
           )}

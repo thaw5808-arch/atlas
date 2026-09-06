@@ -35,7 +35,13 @@ export function CorrectionDecision({ requestId, applicable }: { requestId: strin
   );
 }
 
-export function RepresentativeDecision({ representativeId }: { representativeId: string }) {
+export function RepresentativeDecision({
+  representativeId,
+  showReject = true,
+}: {
+  representativeId: string;
+  showReject?: boolean;
+}) {
   const [pending, startTransition] = useTransition();
   return (
     <div className="flex gap-2">
@@ -47,14 +53,16 @@ export function RepresentativeDecision({ representativeId }: { representativeId:
       >
         Verify
       </button>
-      <button
-        type="button"
-        className="btn btn-sm"
-        disabled={pending}
-        onClick={() => startTransition(async () => { await reviewRepresentative(representativeId, "reject"); })}
-      >
-        Reject
-      </button>
+      {showReject && (
+        <button
+          type="button"
+          className="btn btn-sm"
+          disabled={pending}
+          onClick={() => startTransition(async () => { await reviewRepresentative(representativeId, "reject"); })}
+        >
+          Reject
+        </button>
+      )}
     </div>
   );
 }
