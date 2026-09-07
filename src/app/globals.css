@@ -70,14 +70,26 @@
 /* Component classes live in a layer so Tailwind utilities can always
    override them — an unlayered .btn silently beats every utility. */
 @layer components {
+  /* At 66% white this read as a plain opaque bar over the paper background — barely any of the
+     blur showed. Dropping the tint to 45%, pushing blur/saturate up, and splitting the edge into
+     three distinct layers (a bright top hairline, a soft halo just outside the crisp border, and
+     the original ambient shadow) is what actually reads as glass instead of a pill.
+     45% is as low as this goes and still keeps nav text at AA against anything scrolling under
+     it — checked against the worst realistic case, a solid viridian/brass/rust button (e.g. a
+     .btn-accent) scrolled directly behind the nav, not just the empty page: at this tint even a
+     fully-saturated, undiluted patch of the darkest of those (viridian/rust) still leaves
+     --color-ink at ~5.9:1 and --color-deep at ~4.85:1. --color-slate does not clear that case
+     (it only manages ~2.3:1) — see the nav's own comment for where that changes what color it
+     uses for "not the current page" text instead of slate. */
   .glass {
-    background: color-mix(in oklab, white 66%, transparent);
-    backdrop-filter: blur(20px) saturate(140%);
-    -webkit-backdrop-filter: blur(20px) saturate(140%);
-    border: 1px solid rgba(255, 255, 255, 0.55);
+    background: color-mix(in oklab, white 45%, transparent);
+    backdrop-filter: blur(28px) saturate(165%);
+    -webkit-backdrop-filter: blur(28px) saturate(165%);
+    border: 1px solid rgba(255, 255, 255, 0.4);
     box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.8) inset,
-      0 12px 36px -18px rgba(11, 31, 41, 0.45);
+      0 1px 0 rgba(255, 255, 255, 0.9) inset,
+      0 0 2px 1px rgba(255, 255, 255, 0.2),
+      0 14px 40px -20px rgba(11, 31, 41, 0.5);
   }
 
   .glass-dark {

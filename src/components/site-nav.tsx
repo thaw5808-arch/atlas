@@ -103,16 +103,22 @@ export function SiteNav({
         <nav className="glass pointer-events-auto flex h-14 items-center gap-1 rounded-full pl-5 pr-2">
           <Link href="/" className="mr-3 flex items-baseline gap-2">
             <span className="font-display text-lg tracking-tight">ATLAS</span>
-            <span className="hidden text-[11px] text-mist xl:inline">education planning</span>
+            <span className="hidden text-[11px] text-deep xl:inline">education planning</span>
           </Link>
 
+          {/* text-deep, not text-slate, for anything resting directly on .glass: slate is
+              tuned against the opaque --color-paper page background and doesn't hold AA once
+              a saturated scrolled-under button (viridian/rust, the worst of the palette) is
+              behind the blur — see the contrast note on .glass. text-ink (active) already
+              clears every case, and text-deep gets there too with room to spare, while still
+              reading a shade lighter than the active link. */}
           {LINKS.map((link) => (
             <Link
               key={link.href}
               href={link.href}
               aria-current={isActive(link.href) ? "page" : undefined}
               className={`relative rounded-full px-3 py-1.5 text-sm transition-colors ${
-                isActive(link.href) ? "text-ink" : "text-slate hover:text-ink"
+                isActive(link.href) ? "text-ink" : "text-deep hover:text-ink"
               }`}
             >
               {link.label}
@@ -127,7 +133,7 @@ export function SiteNav({
               href={roleLink.href}
               aria-current={isActive(roleLink.href) ? "page" : undefined}
               className={`relative rounded-full px-3 py-1.5 text-sm transition-colors ${
-                isActive(roleLink.href) ? "text-ink" : "text-slate hover:text-ink"
+                isActive(roleLink.href) ? "text-ink" : "text-deep hover:text-ink"
               }`}
             >
               {roleLink.label}
@@ -216,7 +222,7 @@ export function SiteNav({
                 aria-label={link.label}
                 aria-current={isActive(link.href) ? "page" : undefined}
                 className={`flex h-10 w-10 items-center justify-center rounded-full ${
-                  isActive(link.href) ? "bg-ink text-white" : "text-slate"
+                  isActive(link.href) ? "bg-ink text-white" : "text-deep"
                 }`}
               >
                 <Icon size={19} />
@@ -230,7 +236,7 @@ export function SiteNav({
             aria-label="Open menu"
             aria-haspopup="dialog"
             aria-expanded={open}
-            className="flex h-10 w-10 items-center justify-center rounded-full text-slate"
+            className="flex h-10 w-10 items-center justify-center rounded-full text-deep"
           >
             <Menu size={19} />
           </button>
