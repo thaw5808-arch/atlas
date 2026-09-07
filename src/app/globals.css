@@ -216,6 +216,36 @@
   .hash-target {
     animation: hash-target-flash 1.8s ease-out;
   }
+
+  /* Country borders on the CountryExplorer map. Countries outside the dataset are flat and
+     non-interactive; countries in it get a viridian tint that deepens on hover/focus and
+     again once selected (via the "g[aria-pressed]" state set from React, since that state
+     isn't otherwise expressible in CSS). */
+  .country-muted {
+    fill: #d6ddd0;
+    stroke: #0b1f29;
+    stroke-opacity: 0.08;
+    stroke-width: 0.75;
+  }
+
+  .country-highlighted path {
+    fill: var(--color-viridian);
+    fill-opacity: 0.14;
+    stroke: var(--color-viridian);
+    stroke-opacity: 0.55;
+    stroke-width: 0.75;
+    cursor: pointer;
+    transition: fill-opacity 120ms ease;
+  }
+
+  .country-highlighted:hover path,
+  .country-highlighted:focus-visible path {
+    fill-opacity: 0.3;
+  }
+
+  .country-highlighted[aria-pressed="true"] path {
+    fill-opacity: 0.42;
+  }
 }
 
 @keyframes hash-target-flash {

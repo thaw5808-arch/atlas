@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { X } from "lucide-react";
 import { formatMoney } from "@/lib/money";
+import worldCountriesData from "@/data/world-countries-110m.json";
 
 export type CountryEntry = {
   code: string;
@@ -28,60 +29,80 @@ export type CountryEntry = {
   cities: string[];
 };
 
+// Shape of src/data/world-countries-110m.json — real country borders at 110m resolution
+// (world-atlas), reduced to just {name, code} + geometry and regenerated locally with
+// `npm run data:world-countries` (see scripts/build-world-countries.js). Bundled as a static
+// import rather than fetched, so the map works offline and needs no runtime geo dependency.
+type Ring = [number, number][];
+type WorldGeometry = { type: "Polygon"; coordinates: Ring[] } | { type: "MultiPolygon"; coordinates: Ring[][] };
+type WorldFeature = { type: "Feature"; properties: { name: string; code: string | null }; geometry: WorldGeometry };
+const worldCountries = worldCountriesData as unknown as { features: WorldFeature[] };
+
 // Equirectangular projection onto the 1000 × 500 plot below.
 const project = (lat: number, lon: number) => ({
   x: ((lon + 180) / 360) * 1000,
   y: ((90 - lat) / 180) * 500,
 });
 
-// Very low-detail continent silhouettes, as a handful of [lat, lon] corners
-// each — just enough to read as landmasses, not a real coastline. Run
-// through the same `project` as the markers so they always land in the
-// right place relative to the plotted points.
-const LANDMASSES: [number, number][][] = [
-  // North America
-  [
-    [72, -165], [71, -140], [60, -95], [50, -80], [45, -65], [40, -74],
-    [25, -80], [18, -95], [9, -83], [15, -92], [20, -105], [32, -117],
-    [48, -125], [60, -150],
-  ],
-  // South America
-  [
-    [12, -72], [10, -62], [-5, -35], [-23, -43], [-34, -58], [-55, -68],
-    [-50, -74], [-18, -70], [0, -79],
-  ],
-  // Europe
-  [
-    [71, 25], [65, -10], [45, -10], [36, -6], [38, 15], [45, 20],
-    [55, 40], [65, 45],
-  ],
-  // Africa
-  [
-    [37, 10], [33, -8], [15, -17], [5, -10], [-5, 10], [-25, 15],
-    [-34, 18], [-25, 33], [0, 42], [12, 45], [20, 38], [30, 32],
-  ],
-  // Asia
-  [
-    [75, 60], [70, 140], [60, 160], [45, 140], [35, 130], [20, 110],
-    [10, 100], [5, 95], [8, 80], [8, 77], [20, 70], [35, 55],
-    [45, 50], [55, 45], [65, 40],
-  ],
-  // Australia
-  [
-    [-12, 130], [-10, 142], [-20, 150], [-35, 150], [-38, 145],
-    [-35, 138], [-32, 115], [-20, 115],
-  ],
-];
+// Turns one ring of [lon, lat] pairs into one or more closed SVG subpaths. Split wherever
+// longitude jumps by more than 180° between consecutive points — otherwise a country that
+// crosses the antimeridian (Russia, Fiji, the Aleutians) would draw a spurious line straight
+// across the map, since this is a plain equirectangular projection with no spherical clipping.
+function ringToPathParts(ring: Ring): string[] {
+  const parts: string[] = [];
+  let current: string[] = [];
+  let prevLon: number | null = null;
+  for (const [lon, lat] of ring) {
+    const { x, y } = project(lat, lon);
+    if (prevLon !== null && Math.abs(lon - prevLon) > 180 && current.length > 0) {
+      parts.push(`${current.join(" ")} Z`);
+      current = [];
+    }
+    current.push(`${current.length === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`);
+    prevLon = lon;
+  }
+  if (current.length > 0) parts.push(`${current.join(" ")} Z`);
+  return parts;
+}
 
-function landmassPath(points: [number, number][]) {
-  return (
-    points
-      .map(([lat, lon], index) => {
-        const { x, y } = project(lat, lon);
-        return `${index === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
-      })
-      .join(" ") + " Z"
-  );
+// One `d` string per feature, all rings and (for MultiPolygons) all parts combined — evenodd
+// fill so holes (e.g. Lesotho inside South Africa) punch through correctly regardless of ring
+// winding order.
+function geometryToPath(geometry: WorldGeometry): string {
+  const polygons = geometry.type === "Polygon" ? [geometry.coordinates] : geometry.coordinates;
+  return polygons.flatMap((polygon) => polygon.flatMap(ringToPathParts)).join(" ");
+}
+
+// A 13px label is roughly 6.5px per character wide on average for this font — precise enough
+// to keep labels from overlapping without measuring actual rendered text.
+const approxLabelWidth = (text: string) => text.length * 6.5;
+
+type Positioned = { country: CountryEntry; x: number; y: number; radius: number };
+type Labelled = Positioned & { labelY: number };
+
+// Places each label to the right of its marker, then nudges any label down, one line at a
+// time, until its (approximated) bounding box clears every label already placed. Processes
+// points in the given order, so earlier entries never move for later ones.
+function layoutLabels(points: Positioned[]): Labelled[] {
+  const placed: { left: number; right: number; top: number; bottom: number }[] = [];
+  return points.map((point) => {
+    const left = point.x + point.radius + 4;
+    const width = approxLabelWidth(point.country.name);
+    const right = left + width;
+    let labelY = point.y + 4;
+    for (;;) {
+      const top = labelY - 10;
+      const bottom = labelY + 4;
+      const overlapsPlaced = placed.some(
+        (box) => !(right < box.left || left > box.right || bottom < box.top || top > box.bottom),
+      );
+      if (!overlapsPlaced) {
+        placed.push({ left, right, top, bottom });
+        return { ...point, labelY };
+      }
+      labelY += 14;
+    }
+  });
 }
 
 export function CountryExplorer({ countries, initialCode }: { countries: CountryEntry[]; initialCode?: string }) {
@@ -89,53 +110,72 @@ export function CountryExplorer({ countries, initialCode }: { countries: Country
     countries.find((country) => country.code === initialCode) ?? null,
   );
 
-  const positioned = countries
-    .filter((country): country is CountryEntry & { latitude: number; longitude: number } =>
-      country.latitude != null && country.longitude != null,
-    )
-    .map((country) => {
-      const { x, y } = project(country.latitude, country.longitude);
-      return { country, x, y, radius: 6 + Math.min(14, country.universityCount * 3) };
-    });
+  const countryByCode = useMemo(() => new Map(countries.map((country) => [country.code, country])), [countries]);
 
-  // When two markers land within ~40px of each other, their default labels
-  // (set to the right of the marker, roughly at marker height) collide. Drop
-  // the later one down a line so both stay legible.
-  const droppedLabels = new Set<string>();
-  positioned.forEach((point, index) => {
-    for (let earlier = 0; earlier < index; earlier++) {
-      const other = positioned[earlier];
-      if (Math.hypot(point.x - other.x, point.y - other.y) < 40) {
-        droppedLabels.add(point.country.code);
-        break;
+  const labelled = useMemo(() => {
+    const positioned = countries
+      .filter((country): country is CountryEntry & { latitude: number; longitude: number } =>
+        country.latitude != null && country.longitude != null,
+      )
+      .map((country) => {
+        const { x, y } = project(country.latitude, country.longitude);
+        return { country, x, y, radius: 6 + Math.min(14, country.universityCount * 3) };
+      });
+    return layoutLabels(positioned);
+  }, [countries]);
+
+  const { mutedPaths, highlightedPaths, unmarkedHighlighted } = useMemo(() => {
+    const positionedCodes = new Set(labelled.map((point) => point.country.code));
+    const muted: { key: string; d: string }[] = [];
+    const highlighted = new Map<string, string>(); // code -> path d
+    const extra: { country: CountryEntry; d: string }[] = [];
+
+    for (const feature of worldCountries.features) {
+      const code = feature.properties.code;
+      const country = code ? countryByCode.get(code) : undefined;
+      if (!country) {
+        muted.push({ key: code ?? feature.properties.name, d: geometryToPath(feature.geometry) });
+        continue;
+      }
+      const d = geometryToPath(feature.geometry);
+      if (positionedCodes.has(country.code)) {
+        highlighted.set(country.code, d);
+      } else {
+        // Present in the dataset but with no lat/long to hang a marker off — still
+        // highlighted and clickable, just via the shape alone.
+        extra.push({ country, d });
       }
     }
-  });
+    return { mutedPaths: muted, highlightedPaths: highlighted, unmarkedHighlighted: extra };
+  }, [countryByCode, labelled]);
+
+  const open = (country: CountryEntry) => setSelected(country);
+  const activateOnKey = (country: CountryEntry) => (event: React.KeyboardEvent) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      open(country);
+    }
+  };
 
   return (
     <div className="relative">
       <div className="panel overflow-hidden">
-        {/* Not role="img": the markers below are real controls, and labelling the whole svg as a
-            single image would flatten them out of the accessibility tree. The decorative ground
-            (fill, landmasses, grid) is hidden from assistive tech instead, and each marker
-            carries its own name. */}
+        {/* Not role="img": the shapes and markers below are real controls, and labelling the
+            whole svg as a single image would flatten them out of the accessibility tree. The
+            decorative ground (fill, muted countries, grid) is hidden from assistive tech
+            instead, and each highlighted country carries its own name. */}
         <svg
           viewBox="0 0 1000 500"
           className="h-auto w-full"
           role="group"
-          aria-label="Countries in the dataset, plotted by coordinates"
+          aria-label="Countries in the dataset, plotted on a world map"
         >
           <rect width="1000" height="500" fill="#e9ede7" aria-hidden="true" />
-          {LANDMASSES.map((points, index) => (
-            <path
-              key={`land${index}`}
-              d={landmassPath(points)}
-              fill="#d6ddd0"
-              stroke="#0b1f29"
-              strokeOpacity={0.08}
-              aria-hidden="true"
-            />
+
+          {mutedPaths.map(({ key, d }) => (
+            <path key={key} d={d} fillRule="evenodd" className="country-muted" aria-hidden="true" />
           ))}
+
           {Array.from({ length: 12 }).map((_, index) => (
             <line
               key={`v${index}`}
@@ -161,9 +201,8 @@ export function CountryExplorer({ countries, initialCode }: { countries: Country
             />
           ))}
 
-          {positioned.map(({ country, x, y, radius }) => {
+          {unmarkedHighlighted.map(({ country, d }) => {
             const active = selected?.code === country.code;
-            const labelY = y + 4 + (droppedLabels.has(country.code) ? 14 : 0);
             return (
               <g
                 key={country.code}
@@ -171,15 +210,31 @@ export function CountryExplorer({ countries, initialCode }: { countries: Country
                 tabIndex={0}
                 aria-label={country.name}
                 aria-pressed={active}
-                onClick={() => setSelected(country)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    setSelected(country);
-                  }
-                }}
+                onClick={() => open(country)}
+                onKeyDown={activateOnKey(country)}
+                className="country-highlighted"
+              >
+                <path d={d} fillRule="evenodd" aria-hidden="true" />
+              </g>
+            );
+          })}
+
+          {labelled.map(({ country, x, y, radius, labelY }) => {
+            const active = selected?.code === country.code;
+            const d = highlightedPaths.get(country.code);
+            return (
+              <g
+                key={country.code}
+                role="button"
+                tabIndex={0}
+                aria-label={country.name}
+                aria-pressed={active}
+                onClick={() => open(country)}
+                onKeyDown={activateOnKey(country)}
+                className="country-highlighted"
                 style={{ cursor: "pointer" }}
               >
+                {d && <path d={d} fillRule="evenodd" aria-hidden="true" />}
                 <circle cx={x} cy={y} r={radius} fill="#17635a" fillOpacity={active ? 0.28 : 0.14} aria-hidden="true" />
                 <circle cx={x} cy={y} r={4} fill={active ? "#0b1f29" : "#17635a"} aria-hidden="true" />
                 <text x={x + radius + 4} y={labelY} fontSize={13} fill="#47606b" aria-hidden="true">

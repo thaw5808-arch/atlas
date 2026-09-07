@@ -13,7 +13,8 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "data:world-countries": "node scripts/build-world-countries.js"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -36,8 +37,10 @@
     "@types/react-dom": "^19.1.0",
     "prisma": "^6.19.3",
     "tailwindcss": "^4.1.13",
+    "topojson-client": "^3.1.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",
-    "vitest": "^5.0.0"
+    "vitest": "^5.0.0",
+    "world-atlas": "^2.0.2"
   }
 }
