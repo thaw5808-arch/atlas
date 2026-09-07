@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -135,12 +135,15 @@ export function ScenarioLab({
         </p>
 
         <div className="mt-4">
-          <p className="label">Where you live</p>
-          <div className="flex flex-wrap gap-1.5">
+          <p className="label" id="housing-label">
+            Where you live
+          </p>
+          <div className="flex flex-wrap gap-1.5" role="group" aria-labelledby="housing-label">
             {(Object.keys(HOUSING_LABEL) as HousingKey[]).map((key) => (
               <button
                 key={key}
                 type="button"
+                aria-pressed={housing === key}
                 disabled={!option.housing[key]}
                 onClick={() => setHousing(key)}
                 className={housing === key ? "chip chip-selected" : "chip"}
@@ -152,12 +155,15 @@ export function ScenarioLab({
         </div>
 
         <div className="mt-4">
-          <p className="label">Part-time work assumption</p>
-          <div className="flex flex-wrap gap-1.5">
+          <p className="label" id="work-label">
+            Part-time work assumption
+          </p>
+          <div className="flex flex-wrap gap-1.5" role="group" aria-labelledby="work-label">
             {(Object.keys(WORK_LABEL) as WorkAssumptionCode[]).map((key) => (
               <button
                 key={key}
                 type="button"
+                aria-pressed={work === key}
                 onClick={() => setWork(key)}
                 className={work === key ? "chip chip-selected" : "chip"}
               >
@@ -357,13 +363,17 @@ function Slider({
   onChange: (value: number) => void;
   display: string;
 }) {
+  const id = useId();
   return (
     <div className="mt-4">
       <div className="flex items-baseline justify-between">
-        <span className="label mb-0">{label}</span>
+        <label className="label mb-0" htmlFor={id}>
+          {label}
+        </label>
         <span className="tabular text-xs text-slate">{display}</span>
       </div>
       <input
+        id={id}
         type="range"
         className="mt-1.5 w-full accent-[var(--color-viridian)]"
         min={min}

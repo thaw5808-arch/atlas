@@ -205,10 +205,12 @@ const ROLES = ["STUDENT", "REPRESENTATIVE", "ADMIN"] as const;
 
 export function RoleSelect({
   userId,
+  userName,
   role,
   disabled,
 }: {
   userId: string;
+  userName: string;
   role: string;
   disabled?: boolean;
 }) {
@@ -219,7 +221,11 @@ export function RoleSelect({
   return (
     <div className="flex items-center justify-end gap-2">
       {error && <span className="text-xs text-rust">{error}</span>}
+      <label htmlFor={`role-${userId}`} className="sr-only">
+        Role for {userName}
+      </label>
       <select
+        id={`role-${userId}`}
         className="input h-9 w-auto"
         value={current}
         disabled={disabled || pending}

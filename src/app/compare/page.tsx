@@ -136,9 +136,9 @@ export default async function ComparePage({
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-line">
-                  <th className="w-48 px-5 py-4 text-left text-xs font-medium text-slate">Field</th>
+                  <th scope="col" className="w-48 px-5 py-4 text-left text-xs font-medium text-slate">Field</th>
                   {candidates.map((candidate) => (
-                    <th key={candidate.slug} className="px-4 py-4 text-left align-bottom">
+                    <th key={candidate.slug} scope="col" className="px-4 py-4 text-left align-bottom">
                       <FitRing score={candidate.score.overall} size={44} />
                       <Link href={`/universities/${candidate.slug}`} className="mt-2 block text-sm font-medium hover:underline">
                         {candidate.input.universityName}
@@ -150,7 +150,7 @@ export default async function ComparePage({
               <tbody>
                 {rows.map((row) => (
                   <tr key={row.label} className="border-b border-line last:border-0">
-                    <th className="px-5 py-3 text-left text-xs font-medium text-slate">{row.label}</th>
+                    <th scope="row" className="px-5 py-3 text-left text-xs font-medium text-slate">{row.label}</th>
                     {candidates.map((candidate) => (
                       <td key={candidate.slug} className="px-4 py-3">
                         {row.value(candidate)}

@@ -24,13 +24,13 @@ export default async function AdminScholarshipsPage() {
       <table className="w-full min-w-[760px] text-sm">
         <thead>
           <tr className="border-b border-line text-left text-xs text-slate">
-            <th className="px-5 py-3 font-medium">Scholarship</th>
-            <th className="px-3 py-3 font-medium">Provider</th>
-            <th className="px-3 py-3 font-medium">Scope</th>
-            <th className="px-3 py-3 font-medium">Deadline</th>
-            <th className="px-3 py-3 font-medium">Source</th>
-            <th className="px-3 py-3 font-medium">Status</th>
-            <th className="px-5 py-3 font-medium"></th>
+            <th scope="col" className="px-5 py-3 font-medium">Scholarship</th>
+            <th scope="col" className="px-3 py-3 font-medium">Provider</th>
+            <th scope="col" className="px-3 py-3 font-medium">Scope</th>
+            <th scope="col" className="px-3 py-3 font-medium">Deadline</th>
+            <th scope="col" className="px-3 py-3 font-medium">Source</th>
+            <th scope="col" className="px-3 py-3 font-medium">Status</th>
+            <th scope="col" className="px-5 py-3 font-medium"></th>
           </tr>
         </thead>
         <tbody>

@@ -71,12 +71,15 @@ export function WeightsPanel({
         <div className="mt-4 space-y-3">
           {ROWS.map(([key, label]) => (
             <div key={key}>
-              <span className="label mb-1.5">{label}</span>
-              <div className="flex flex-wrap gap-1.5">
+              <span className="label mb-1.5" id={`weight-${key}-label`}>
+                {label}
+              </span>
+              <div className="flex flex-wrap gap-1.5" role="group" aria-labelledby={`weight-${key}-label`}>
                 {OPTIONS.map((option) => (
                   <button
                     key={option}
                     type="button"
+                    aria-pressed={weights[key] === option}
                     onClick={() => setWeights((current) => ({ ...current, [key]: option }))}
                     className={weights[key] === option ? "chip chip-selected" : "chip"}
                   >

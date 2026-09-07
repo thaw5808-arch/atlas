@@ -55,10 +55,14 @@ export default async function SearchPage({
       </header>
 
       <form action="/search" method="GET" className="glass flex items-center gap-2 rounded-[22px] p-3 sm:p-4">
-        <SearchIcon size={17} className="ml-1 shrink-0 text-mist" />
+        <SearchIcon size={17} className="ml-1 shrink-0 text-mist" aria-hidden="true" />
+        <label htmlFor="search-q" className="sr-only">
+          Search universities, cities, countries, scholarships
+        </label>
         <input
+          id="search-q"
           name="q"
-          className="input h-10 flex-1 border-none bg-transparent shadow-none focus:outline-none"
+          className="input h-10 flex-1 border-none bg-transparent shadow-none"
           placeholder="Search universities, cities, countries, scholarships…"
           defaultValue={query}
           autoFocus

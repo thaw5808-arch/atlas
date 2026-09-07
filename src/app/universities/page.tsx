@@ -56,6 +56,10 @@ export default async function UniversitiesPage({
         />
       </Suspense>
 
+      {/* Visually hidden: the count line above already reads as the section's intro, but the
+          cards below render an h3 each, so a heading has to sit between it and the page's h1
+          or those h3s skip a level. */}
+      <h2 className="sr-only">Search results</h2>
       <p className="text-sm text-slate">
         <span className="tabular font-medium text-ink">{sorted.length}</span> programs match these
         filters

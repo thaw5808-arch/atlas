@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Bell,
   Bookmark,
@@ -39,7 +39,56 @@ export function SiteNav({
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+
+  // Trap focus inside the sheet while it's open, close it on Escape, and make the rest of the
+  // app inert so Tab and screen-reader virtual cursors can't reach content underneath. The
+  // cleanup (which fires the moment `open` flips back to false, for any reason — Escape, the
+  // backdrop, a nav link) is also where we return focus to the button that opened it.
+  useEffect(() => {
+    if (!open) return;
+
+    const main = document.getElementById("app-main");
+    main?.setAttribute("inert", "");
+
+    const getFocusable = () =>
+      Array.from(
+        dialogRef.current?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      );
+
+    getFocusable()[0]?.focus();
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setOpen(false);
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const items = getFocusable();
+      if (items.length === 0) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      main?.removeAttribute("inert");
+      menuButtonRef.current?.focus();
+    };
+  }, [open]);
 
   const roleLink =
     user?.role === "REPRESENTATIVE"
@@ -61,6 +110,7 @@ export function SiteNav({
             <Link
               key={link.href}
               href={link.href}
+              aria-current={isActive(link.href) ? "page" : undefined}
               className={`relative rounded-full px-3 py-1.5 text-sm transition-colors ${
                 isActive(link.href) ? "text-ink" : "text-slate hover:text-ink"
               }`}
@@ -75,6 +125,7 @@ export function SiteNav({
           {roleLink && (
             <Link
               href={roleLink.href}
+              aria-current={isActive(roleLink.href) ? "page" : undefined}
               className={`relative rounded-full px-3 py-1.5 text-sm transition-colors ${
                 isActive(roleLink.href) ? "text-ink" : "text-slate hover:text-ink"
               }`}
@@ -121,8 +172,10 @@ export function SiteNav({
       </header>
 
       {/* Mobile: a compact edge-to-edge header, since there's no room for the full desktop nav
-          and the bottom tab bar doesn't carry the wordmark or an account control. */}
-      <div className="pointer-events-none fixed inset-x-0 top-0 z-50 lg:hidden">
+          and the bottom tab bar doesn't carry the wordmark or an account control. Made inert
+          while the menu sheet is open so it can't take keyboard or screen-reader focus from
+          underneath the sheet's backdrop. */}
+      <div className="pointer-events-none fixed inset-x-0 top-0 z-50 lg:hidden" inert={open || undefined}>
         <div className="glass pointer-events-auto flex items-center justify-between rounded-none border-x-0 border-t-0 px-4 pb-2.5 pt-[calc(0.625rem_+_env(safe-area-inset-top))]">
           <Link href="/" className="font-display text-lg tracking-tight">
             ATLAS
@@ -147,8 +200,12 @@ export function SiteNav({
       </div>
 
       {/* Mobile: a compact floating bar, not a shrunken desktop nav. Its bottom padding adds the
-          safe-area inset on top of the usual gap so it clears the home indicator on iPhones. */}
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center px-4 pb-[calc(1rem_+_env(safe-area-inset-bottom))] lg:hidden">
+          safe-area inset on top of the usual gap so it clears the home indicator on iPhones.
+          Made inert while the menu sheet is open — see the note above. */}
+      <div
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center px-4 pb-[calc(1rem_+_env(safe-area-inset-bottom))] lg:hidden"
+        inert={open || undefined}
+      >
         <nav className="glass pointer-events-auto flex h-14 w-full max-w-md items-center justify-around rounded-full px-2">
           {[LINKS[0], LINKS[1], LINKS[4], LINKS[6]].map((link) => {
             const Icon = link.icon;
@@ -157,6 +214,7 @@ export function SiteNav({
                 key={link.href}
                 href={link.href}
                 aria-label={link.label}
+                aria-current={isActive(link.href) ? "page" : undefined}
                 className={`flex h-10 w-10 items-center justify-center rounded-full ${
                   isActive(link.href) ? "bg-ink text-white" : "text-slate"
                 }`}
@@ -166,9 +224,12 @@ export function SiteNav({
             );
           })}
           <button
+            ref={menuButtonRef}
             type="button"
             onClick={() => setOpen(true)}
             aria-label="Open menu"
+            aria-haspopup="dialog"
+            aria-expanded={open}
             className="flex h-10 w-10 items-center justify-center rounded-full text-slate"
           >
             <Menu size={19} />
@@ -184,10 +245,21 @@ export function SiteNav({
             className="absolute inset-0 bg-ink/40"
             onClick={() => setOpen(false)}
           />
-          <div className="glass absolute inset-x-3 bottom-3 rounded-3xl p-4">
+          <div
+            ref={dialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Menu"
+            className="glass absolute inset-x-3 bottom-3 rounded-3xl p-4"
+          >
             <div className="mb-3 flex items-center justify-between">
               <span className="font-display text-lg">ATLAS</span>
-              <button type="button" className="btn btn-ghost h-8 w-8 px-0" onClick={() => setOpen(false)}>
+              <button
+                type="button"
+                aria-label="Close menu"
+                className="btn btn-ghost h-8 w-8 px-0"
+                onClick={() => setOpen(false)}
+              >
                 <X size={18} />
               </button>
             </div>

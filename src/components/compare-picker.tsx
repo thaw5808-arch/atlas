@@ -31,11 +31,12 @@ export function ComparePicker({
             <button
               key={university.slug}
               type="button"
+              aria-pressed={active}
               onClick={() => toggle(university.slug)}
               className={active ? "chip chip-selected" : "chip"}
               disabled={!active && selected.length >= 5}
             >
-              {active && <Check size={12} />}
+              {active && <Check size={12} aria-hidden="true" />}
               {university.name}
             </button>
           );

@@ -22,6 +22,7 @@ export function AdminNav() {
         <Link
           key={link.href}
           href={link.href}
+          aria-current={pathname === link.href ? "page" : undefined}
           className={`rounded-full px-3.5 py-1.5 text-sm ${
             pathname === link.href ? "bg-ink text-white" : "text-slate"
           }`}

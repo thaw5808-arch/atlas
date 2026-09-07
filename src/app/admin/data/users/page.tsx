@@ -19,10 +19,10 @@ export default async function AdminUsersPage() {
       <table className="w-full min-w-[640px] text-sm">
         <thead>
           <tr className="border-b border-line text-left text-xs text-slate">
-            <th className="px-5 py-3 font-medium">Name</th>
-            <th className="px-3 py-3 font-medium">Email</th>
-            <th className="px-3 py-3 font-medium">Joined</th>
-            <th className="px-5 py-3 text-right font-medium">Role</th>
+            <th scope="col" className="px-5 py-3 font-medium">Name</th>
+            <th scope="col" className="px-3 py-3 font-medium">Email</th>
+            <th scope="col" className="px-3 py-3 font-medium">Joined</th>
+            <th scope="col" className="px-5 py-3 text-right font-medium">Role</th>
           </tr>
         </thead>
         <tbody>
@@ -35,7 +35,7 @@ export default async function AdminUsersPage() {
                 {row.id === user.id ? (
                   <p className="text-right text-xs text-mist">{titleCase(row.role)} · you</p>
                 ) : (
-                  <RoleSelect userId={row.id} role={row.role} />
+                  <RoleSelect userId={row.id} userName={row.name} role={row.role} />
                 )}
               </td>
             </tr>

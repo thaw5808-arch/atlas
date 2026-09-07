@@ -189,13 +189,13 @@ export default async function UniversityPage({ params }: { params: Promise<{ slu
           <table className="w-full min-w-[620px] text-sm">
             <thead>
               <tr className="border-b border-line text-left text-xs text-slate">
-                <th className="px-5 py-3 font-medium">Living arrangement</th>
-                <th className="px-3 py-3 text-right font-medium">Housing</th>
-                <th className="px-3 py-3 text-right font-medium">Food</th>
-                <th className="px-3 py-3 text-right font-medium">Transport</th>
-                <th className="px-3 py-3 text-right font-medium">Insurance</th>
-                <th className="px-3 py-3 text-right font-medium">Personal</th>
-                <th className="px-5 py-3 text-right font-medium">Per month</th>
+                <th scope="col" className="px-5 py-3 font-medium">Living arrangement</th>
+                <th scope="col" className="px-3 py-3 text-right font-medium">Housing</th>
+                <th scope="col" className="px-3 py-3 text-right font-medium">Food</th>
+                <th scope="col" className="px-3 py-3 text-right font-medium">Transport</th>
+                <th scope="col" className="px-3 py-3 text-right font-medium">Insurance</th>
+                <th scope="col" className="px-3 py-3 text-right font-medium">Personal</th>
+                <th scope="col" className="px-5 py-3 text-right font-medium">Per month</th>
               </tr>
             </thead>
             <tbody>
@@ -403,32 +403,35 @@ export default async function UniversityPage({ params }: { params: Promise<{ slu
         )}
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-3">
-        <div className="panel p-5">
-          <h3 className="flex items-center gap-2 text-base">
-            <Home size={16} className="text-viridian" /> Housing
-          </h3>
-          <p className="mt-2 text-sm text-slate">
-            {university.housingAvailable
-              ? university.housingNotes ?? "University housing is available to international students."
-              : "No university housing recorded — students rent privately."}
-          </p>
-        </div>
-        <div className="panel p-5">
-          <h3 className="text-base">Work rules while studying</h3>
-          <p className="mt-2 text-sm text-slate">
-            {university.country.workRuleSummary ?? "Not recorded for this country yet."}
-          </p>
-        </div>
-        <div className="panel p-5">
-          <h3 className="flex items-center gap-2 text-base">
-            <Mail size={16} className="text-viridian" /> International office
-          </h3>
-          <p className="mt-2 text-sm text-slate">
-            {university.internationalOfficeEmail ?? "Contact not recorded"}
-            {university.internationalOfficePhone ? ` · ${university.internationalOfficePhone}` : ""}
-          </p>
-          <p className="mt-2 text-xs text-mist">{university.internationalSupport}</p>
+      <section>
+        <SectionHeading title="Life on campus" />
+        <div className="grid gap-4 lg:grid-cols-3">
+          <div className="panel p-5">
+            <h3 className="flex items-center gap-2 text-base">
+              <Home size={16} className="text-viridian" /> Housing
+            </h3>
+            <p className="mt-2 text-sm text-slate">
+              {university.housingAvailable
+                ? university.housingNotes ?? "University housing is available to international students."
+                : "No university housing recorded — students rent privately."}
+            </p>
+          </div>
+          <div className="panel p-5">
+            <h3 className="text-base">Work rules while studying</h3>
+            <p className="mt-2 text-sm text-slate">
+              {university.country.workRuleSummary ?? "Not recorded for this country yet."}
+            </p>
+          </div>
+          <div className="panel p-5">
+            <h3 className="flex items-center gap-2 text-base">
+              <Mail size={16} className="text-viridian" /> International office
+            </h3>
+            <p className="mt-2 text-sm text-slate">
+              {university.internationalOfficeEmail ?? "Contact not recorded"}
+              {university.internationalOfficePhone ? ` · ${university.internationalOfficePhone}` : ""}
+            </p>
+            <p className="mt-2 text-xs text-mist">{university.internationalSupport}</p>
+          </div>
         </div>
       </section>
 

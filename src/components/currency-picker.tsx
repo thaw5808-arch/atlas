@@ -14,6 +14,7 @@ export function CurrencyPicker({ current }: { current: string }) {
           key={currency.code}
           type="button"
           disabled={pending}
+          aria-pressed={currency.code === current}
           className={currency.code === current ? "chip chip-selected" : "chip"}
           onClick={() => startTransition(async () => { await setPreferredCurrency(currency.code); })}
         >

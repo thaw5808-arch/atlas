@@ -147,10 +147,11 @@ export function ProfileEditForm({
                   <button
                     key={country.code}
                     type="button"
+                    aria-pressed={selected}
                     onClick={() => toggleCountry(country.code)}
                     className={selected ? "chip chip-selected" : "chip"}
                   >
-                    {selected && <Check size={12} />}
+                    {selected && <Check size={12} aria-hidden="true" />}
                     {country.name}
                   </button>
                 );
@@ -200,12 +201,17 @@ export function ProfileEditForm({
           </div>
 
           <div>
-            <p className="label">Language qualifications you already hold</p>
-            <div className="space-y-2">
+            <p className="label" id="languages-label">
+              Language qualifications you already hold
+            </p>
+            <div className="space-y-2" role="group" aria-labelledby="languages-label">
               {TESTS.map((test) => (
                 <div key={test.value} className="grid grid-cols-[1fr_8rem] items-center gap-3">
-                  <span className="text-sm">{test.label}</span>
+                  <label htmlFor={`language-${test.value}`} className="text-sm">
+                    {test.label}
+                  </label>
                   <input
+                    id={`language-${test.value}`}
                     className="input"
                     placeholder={test.hint}
                     value={

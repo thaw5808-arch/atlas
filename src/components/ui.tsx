@@ -98,7 +98,7 @@ export function VerificationBadge({
 
   return (
     <span className="chip" style={{ color: entry.color, borderColor: "var(--color-line)" }}>
-      <Icon size={13} />
+      <Icon size={13} aria-hidden="true" />
       {entry.label}
       {lastVerifiedAt ? <span className="text-mist">· {formatDate(lastVerifiedAt)}</span> : null}
     </span>
@@ -160,7 +160,11 @@ export function EmptyState({
 }) {
   return (
     <div className="panel flex flex-col items-center gap-3 px-6 py-12 text-center">
-      <h3 className="text-lg">{title}</h3>
+      {/* h2, not h3: this is almost always the only heading below the page's h1 (there's no
+          SectionHeading in the empty-state branch), so h3 would skip a level. On the one page
+          where it does sit under a SectionHeading's h2, h2-under-h2 is still valid — headings
+          may repeat a level, they just can't skip one. */}
+      <h2 className="text-lg">{title}</h2>
       <p className="max-w-sm text-sm text-slate">{body}</p>
       {action}
     </div>
@@ -170,7 +174,7 @@ export function EmptyState({
 export function DataNotice({ children }: { children: ReactNode }) {
   return (
     <p className="flex items-start gap-2 text-xs text-slate">
-      <CircleHelp size={14} className="mt-0.5 shrink-0 text-mist" />
+      <CircleHelp size={14} className="mt-0.5 shrink-0 text-mist" aria-hidden="true" />
       <span>{children}</span>
     </p>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { cloneElement, isValidElement, useId, useState, useTransition, type ReactElement } from "react";
 import { Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { type OnboardingPayload, saveOnboarding } from "@/lib/actions/profile";
 import { CURRENCIES } from "@/lib/money";
@@ -220,10 +220,11 @@ export function OnboardingWizard({
                     <button
                       key={country.code}
                       type="button"
+                      aria-pressed={selected}
                       onClick={() => toggleCountry(country.code)}
                       className={selected ? "chip chip-selected" : "chip"}
                     >
-                      {selected && <Check size={12} />}
+                      {selected && <Check size={12} aria-hidden="true" />}
                       {country.name}
                     </button>
                   );
@@ -272,12 +273,17 @@ export function OnboardingWizard({
             </div>
 
             <div>
-              <p className="label">Language qualifications you already hold</p>
-              <div className="space-y-2">
+              <p className="label" id="languages-label">
+                Language qualifications you already hold
+              </p>
+              <div className="space-y-2" role="group" aria-labelledby="languages-label">
                 {TESTS.map((test) => (
                   <div key={test.value} className="grid grid-cols-[1fr_8rem] items-center gap-3">
-                    <span className="text-sm">{test.label}</span>
+                    <label htmlFor={`language-${test.value}`} className="text-sm">
+                      {test.label}
+                    </label>
                     <input
+                      id={`language-${test.value}`}
                       className="input"
                       placeholder={test.hint}
                       value={
@@ -427,12 +433,15 @@ export function OnboardingWizard({
               ] as const
             ).map(([key, label]) => (
               <div key={key} className="grid grid-cols-[1fr_auto] items-center gap-3">
-                <span className="text-sm">{label}</span>
-                <div className="flex gap-1">
+                <span className="text-sm" id={`weight-${key}-label`}>
+                  {label}
+                </span>
+                <div className="flex gap-1" role="group" aria-labelledby={`weight-${key}-label`}>
                   {IMPORTANCE_OPTIONS.map((option) => (
                     <button
                       key={option}
                       type="button"
+                      aria-pressed={form.weights?.[key] === option}
                       onClick={() =>
                         patch({
                           weights: {
@@ -492,6 +501,8 @@ export function OnboardingWizard({
   );
 }
 
+const NATIVE_CONTROL_TAGS = new Set(["input", "select", "textarea"]);
+
 export function Field({
   label,
   optional,
@@ -501,13 +512,43 @@ export function Field({
   optional?: boolean;
   children: React.ReactNode;
 }) {
+  const id = useId();
+  const labelId = `${id}-label`;
+  const labelContent = (
+    <>
+      {label}
+      {optional && <span className="ml-1.5 font-normal text-mist">optional</span>}
+    </>
+  );
+
+  // A Field either wraps a single native control (an <input>/<select>/<textarea>, which a real
+  // <label htmlFor> can point straight at) or a custom control like <Pills> — a row of buttons
+  // with no single element to point a label at, which instead gets a group label via
+  // aria-labelledby. Either way the visible label text ends up programmatically tied to the
+  // control(s), where the old plain <span> left every field it wrapped unlabelled for
+  // screen-reader users.
+  const child = isValidElement<{ id?: string }>(children) ? children : null;
+  const wrapsNativeControl = !!child && typeof child.type === "string" && NATIVE_CONTROL_TAGS.has(child.type);
+
+  if (wrapsNativeControl) {
+    return (
+      <div>
+        <label className="label" htmlFor={id}>
+          {labelContent}
+        </label>
+        {cloneElement(child as ReactElement<{ id?: string }>, { id })}
+      </div>
+    );
+  }
+
   return (
     <div>
-      <span className="label">
-        {label}
-        {optional && <span className="ml-1.5 font-normal text-mist">optional</span>}
+      <span className="label" id={labelId}>
+        {labelContent}
       </span>
-      {children}
+      <div role="group" aria-labelledby={labelId}>
+        {children}
+      </div>
     </div>
   );
 }
@@ -527,6 +568,7 @@ export function Pills({
         <button
           key={option.value}
           type="button"
+          aria-pressed={value === option.value}
           onClick={() => onChange(option.value)}
           className={value === option.value ? "chip chip-selected" : "chip"}
         >

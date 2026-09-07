@@ -21,12 +21,12 @@ export default async function AdminDataPage() {
       <table className="w-full min-w-[720px] text-sm">
         <thead>
           <tr className="border-b border-line text-left text-xs text-slate">
-            <th className="px-5 py-3 font-medium">University</th>
-            <th className="px-3 py-3 font-medium">Year</th>
-            <th className="px-3 py-3 text-right font-medium">Tuition</th>
-            <th className="px-3 py-3 font-medium">Source</th>
-            <th className="px-3 py-3 font-medium">Status</th>
-            <th className="px-5 py-3 font-medium"></th>
+            <th scope="col" className="px-5 py-3 font-medium">University</th>
+            <th scope="col" className="px-3 py-3 font-medium">Year</th>
+            <th scope="col" className="px-3 py-3 text-right font-medium">Tuition</th>
+            <th scope="col" className="px-3 py-3 font-medium">Source</th>
+            <th scope="col" className="px-3 py-3 font-medium">Status</th>
+            <th scope="col" className="px-5 py-3 font-medium"></th>
           </tr>
         </thead>
         <tbody>

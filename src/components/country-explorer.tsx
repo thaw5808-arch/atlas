@@ -115,8 +115,17 @@ export function CountryExplorer({ countries, initialCode }: { countries: Country
   return (
     <div className="relative">
       <div className="panel overflow-hidden">
-        <svg viewBox="0 0 1000 500" className="h-auto w-full" role="img" aria-label="Countries in the dataset plotted by coordinates">
-          <rect width="1000" height="500" fill="#e9ede7" />
+        {/* Not role="img": the markers below are real controls, and labelling the whole svg as a
+            single image would flatten them out of the accessibility tree. The decorative ground
+            (fill, landmasses, grid) is hidden from assistive tech instead, and each marker
+            carries its own name. */}
+        <svg
+          viewBox="0 0 1000 500"
+          className="h-auto w-full"
+          role="group"
+          aria-label="Countries in the dataset, plotted by coordinates"
+        >
+          <rect width="1000" height="500" fill="#e9ede7" aria-hidden="true" />
           {LANDMASSES.map((points, index) => (
             <path
               key={`land${index}`}
@@ -124,6 +133,7 @@ export function CountryExplorer({ countries, initialCode }: { countries: Country
               fill="#d6ddd0"
               stroke="#0b1f29"
               strokeOpacity={0.08}
+              aria-hidden="true"
             />
           ))}
           {Array.from({ length: 12 }).map((_, index) => (
@@ -135,6 +145,7 @@ export function CountryExplorer({ countries, initialCode }: { countries: Country
               y2={500}
               stroke="#0b1f29"
               strokeOpacity={0.07}
+              aria-hidden="true"
             />
           ))}
           {Array.from({ length: 7 }).map((_, index) => (
@@ -146,6 +157,7 @@ export function CountryExplorer({ countries, initialCode }: { countries: Country
               y2={(index / 6) * 500}
               stroke="#0b1f29"
               strokeOpacity={index === 3 ? 0.18 : 0.07}
+              aria-hidden="true"
             />
           ))}
 
@@ -153,10 +165,24 @@ export function CountryExplorer({ countries, initialCode }: { countries: Country
             const active = selected?.code === country.code;
             const labelY = y + 4 + (droppedLabels.has(country.code) ? 14 : 0);
             return (
-              <g key={country.code} onClick={() => setSelected(country)} style={{ cursor: "pointer" }}>
-                <circle cx={x} cy={y} r={radius} fill="#17635a" fillOpacity={active ? 0.28 : 0.14} />
-                <circle cx={x} cy={y} r={4} fill={active ? "#0b1f29" : "#17635a"} />
-                <text x={x + radius + 4} y={labelY} fontSize={13} fill="#47606b">
+              <g
+                key={country.code}
+                role="button"
+                tabIndex={0}
+                aria-label={country.name}
+                aria-pressed={active}
+                onClick={() => setSelected(country)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    setSelected(country);
+                  }
+                }}
+                style={{ cursor: "pointer" }}
+              >
+                <circle cx={x} cy={y} r={radius} fill="#17635a" fillOpacity={active ? 0.28 : 0.14} aria-hidden="true" />
+                <circle cx={x} cy={y} r={4} fill={active ? "#0b1f29" : "#17635a"} aria-hidden="true" />
+                <text x={x + radius + 4} y={labelY} fontSize={13} fill="#47606b" aria-hidden="true">
                   {country.name}
                 </text>
               </g>
@@ -169,12 +195,17 @@ export function CountryExplorer({ countries, initialCode }: { countries: Country
         <aside className="glass fixed inset-x-3 bottom-20 z-40 max-h-[70vh] overflow-y-auto rounded-[26px] p-5 lg:absolute lg:inset-auto lg:right-4 lg:top-4 lg:bottom-4 lg:w-96">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h3 className="text-xl">{selected.name}</h3>
+              <h2 className="text-xl">{selected.name}</h2>
               <p className="mt-0.5 text-xs text-slate">
                 {selected.region} · {selected.currency} · {selected.languages.join(", ")}
               </p>
             </div>
-            <button type="button" className="btn btn-ghost h-8 w-8 px-0" onClick={() => setSelected(null)} aria-label="Close">
+            <button
+              type="button"
+              className="btn btn-ghost h-8 w-8 px-0"
+              onClick={() => setSelected(null)}
+              aria-label="Close country details"
+            >
               <X size={16} />
             </button>
           </div>

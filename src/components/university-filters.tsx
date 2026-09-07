@@ -50,7 +50,11 @@ export function UniversityFilters({
   return (
     <div className="glass sticky top-20 z-30 rounded-[22px] p-3 sm:p-4">
       <div className="flex flex-wrap items-center gap-2">
+        <label htmlFor="university-search" className="sr-only">
+          Search a university, city or country
+        </label>
         <input
+          id="university-search"
           className="input h-10 min-w-48 flex-1"
           placeholder="Search a university, city or country"
           defaultValue={params.get("q") ?? ""}
@@ -58,7 +62,11 @@ export function UniversityFilters({
             if (event.key === "Enter") update("q", (event.target as HTMLInputElement).value || null);
           }}
         />
+        <label htmlFor="university-sort" className="sr-only">
+          Sort by
+        </label>
         <select
+          id="university-sort"
           className="input h-10 w-auto"
           value={params.get("sort") ?? "best_match"}
           onChange={(event) => update("sort", event.target.value)}
@@ -69,21 +77,30 @@ export function UniversityFilters({
             </option>
           ))}
         </select>
-        <button type="button" className="btn h-10" onClick={() => setOpen((value) => !value)}>
-          <SlidersHorizontal size={15} />
+        <button
+          type="button"
+          className="btn h-10"
+          aria-expanded={open}
+          aria-controls="university-filter-panel"
+          onClick={() => setOpen((value) => !value)}
+        >
+          <SlidersHorizontal size={15} aria-hidden="true" />
           Filters {activeCount > 0 ? `(${activeCount})` : ""}
         </button>
       </div>
 
       {open && (
-        <div className="mt-4 space-y-4 border-t border-line pt-4">
+        <div id="university-filter-panel" className="mt-4 space-y-4 border-t border-line pt-4">
           <div>
-            <p className="label">Countries</p>
-            <div className="flex flex-wrap gap-1.5">
+            <p className="label" id="filter-countries-label">
+              Countries
+            </p>
+            <div className="flex flex-wrap gap-1.5" role="group" aria-labelledby="filter-countries-label">
               {countries.map((country) => (
                 <button
                   key={country.code}
                   type="button"
+                  aria-pressed={selectedCountries.includes(country.code)}
                   onClick={() => toggleCountry(country.code)}
                   className={selectedCountries.includes(country.code) ? "chip chip-selected" : "chip"}
                 >
@@ -188,6 +205,7 @@ export function UniversityFilters({
                 <button
                   key={key}
                   type="button"
+                  aria-pressed={Boolean(params.get(key))}
                   onClick={() => update(key, params.get(key) ? null : "1")}
                   className={params.get(key) ? "chip chip-selected" : "chip"}
                 >

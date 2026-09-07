@@ -96,13 +96,18 @@ export default async function ScholarshipsPage({
       </header>
 
       <div className="glass flex flex-wrap items-center gap-2 rounded-[22px] p-4">
-        <Link href="/scholarships" className={!filters.state ? "chip chip-selected" : "chip"}>
+        <Link
+          href="/scholarships"
+          aria-current={!filters.state ? "true" : undefined}
+          className={!filters.state ? "chip chip-selected" : "chip"}
+        >
           All
         </Link>
         {(Object.keys(STATE_LABEL) as (keyof typeof STATE_LABEL)[]).map((state) => (
           <Link
             key={state}
             href={`/scholarships?state=${state}`}
+            aria-current={filters.state === state ? "true" : undefined}
             className={filters.state === state ? "chip chip-selected" : "chip"}
           >
             {STATE_LABEL[state]}
@@ -113,6 +118,7 @@ export default async function ScholarshipsPage({
           <Link
             key={country.code}
             href={`/scholarships?country=${country.code}`}
+            aria-current={filters.country === country.code ? "true" : undefined}
             className={filters.country === country.code ? "chip chip-selected" : "chip"}
           >
             {country.name}

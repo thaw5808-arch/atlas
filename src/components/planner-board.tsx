@@ -86,12 +86,22 @@ export function PlannerBoard({ applications }: { applications: PlannerApplicatio
 
   return (
     <div className="space-y-5">
-      <div className="flex gap-2">
-        <button type="button" className={view === "board" ? "btn btn-primary btn-sm" : "btn btn-sm"} onClick={() => setView("board")}>
-          <LayoutGrid size={14} /> Board
+      <div className="flex gap-2" role="group" aria-label="Planner view">
+        <button
+          type="button"
+          aria-pressed={view === "board"}
+          className={view === "board" ? "btn btn-primary btn-sm" : "btn btn-sm"}
+          onClick={() => setView("board")}
+        >
+          <LayoutGrid size={14} aria-hidden="true" /> Board
         </button>
-        <button type="button" className={view === "timeline" ? "btn btn-primary btn-sm" : "btn btn-sm"} onClick={() => setView("timeline")}>
-          <CalendarDays size={14} /> Timeline
+        <button
+          type="button"
+          aria-pressed={view === "timeline"}
+          className={view === "timeline" ? "btn btn-primary btn-sm" : "btn btn-sm"}
+          onClick={() => setView("timeline")}
+        >
+          <CalendarDays size={14} aria-hidden="true" /> Timeline
         </button>
       </div>
 
@@ -141,15 +151,17 @@ export function PlannerBoard({ applications }: { applications: PlannerApplicatio
                           <summary className="cursor-pointer text-xs text-slate">Checklist</summary>
                           <ul className="mt-2 space-y-1.5">
                             {item.tasks.map((task) => (
-                              <li key={task.id} className="flex items-center gap-2 text-xs">
-                                <input
-                                  type="checkbox"
-                                  checked={task.completed}
-                                  onChange={(event) => check(item.id, task.id, event.target.checked)}
-                                />
-                                <span className={task.completed ? "text-mist line-through" : "text-slate"}>
-                                  {task.title}
-                                </span>
+                              <li key={task.id} className="text-xs">
+                                <label className="flex items-center gap-2">
+                                  <input
+                                    type="checkbox"
+                                    checked={task.completed}
+                                    onChange={(event) => check(item.id, task.id, event.target.checked)}
+                                  />
+                                  <span className={task.completed ? "text-mist line-through" : "text-slate"}>
+                                    {task.title}
+                                  </span>
+                                </label>
                               </li>
                             ))}
                           </ul>
