@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { X } from "lucide-react";
 import { formatMoney } from "@/lib/money";
@@ -73,42 +73,109 @@ function geometryToPath(geometry: WorldGeometry): string {
   return polygons.flatMap((polygon) => polygon.flatMap(ringToPathParts)).join(" ");
 }
 
-// A 13px label is roughly 6.5px per character wide on average for this font — precise enough
-// to keep labels from overlapping without measuring actual rendered text.
-const approxLabelWidth = (text: string) => text.length * 6.5;
+// Marker/label sizing, in viewBox units. Mobile markers are rendered noticeably larger — partly
+// because these values are simply bigger, and partly because the map itself renders at a higher
+// effective scale on narrow screens (see the aspect-ratio note on the wrapper below) — the two
+// effects compound rather than compete.
+type MarkerStyle = {
+  baseRadius: number;
+  radiusPerUniversity: number;
+  maxRadiusBonus: number;
+  dotRadius: number;
+  fontSize: number;
+  charWidth: number; // approx. rendered width per character, for label-collision layout
+  lineHeight: number; // vertical step when a label has to drop below a colliding one
+  gap: number; // space between a marker's edge and where its label starts
+};
+
+const DESKTOP_MARKER: MarkerStyle = {
+  baseRadius: 6,
+  radiusPerUniversity: 3,
+  maxRadiusBonus: 14,
+  dotRadius: 4,
+  fontSize: 13,
+  charWidth: 6.5,
+  lineHeight: 14,
+  gap: 4,
+};
+
+const MOBILE_MARKER: MarkerStyle = {
+  baseRadius: 11,
+  radiusPerUniversity: 4,
+  maxRadiusBonus: 20,
+  dotRadius: 7,
+  fontSize: 19,
+  charWidth: 9.5,
+  lineHeight: 21,
+  gap: 6,
+};
+
+// Must match the "aspect-[17/10]" class on the map's wrapper below — it's what determines how
+// much of the map's left/right edges "slice" crops away on mobile. With a native 2:1 map, a
+// container of ratio R (< 2) shows only the middle (R/2) of the full 1000-unit-wide viewBox.
+const MOBILE_ASPECT_RATIO = 17 / 10;
+const MOBILE_SAFE_X: [number, number] = (() => {
+  const visibleWidth = 1000 * (MOBILE_ASPECT_RATIO / 2);
+  const crop = (1000 - visibleWidth) / 2;
+  return [crop, 1000 - crop];
+})();
+const DESKTOP_SAFE_X: [number, number] = [0, 1000];
 
 type Positioned = { country: CountryEntry; x: number; y: number; radius: number };
-type Labelled = Positioned & { labelY: number };
+type Labelled = Positioned & { labelX: number; labelY: number; anchor: "start" | "end" };
 
-// Places each label to the right of its marker, then nudges any label down, one line at a
-// time, until its (approximated) bounding box clears every label already placed. Processes
-// points in the given order, so earlier entries never move for later ones.
-function layoutLabels(points: Positioned[]): Labelled[] {
+// Places each label to the right of its marker — or to the left, anchored from that side
+// instead, if it would otherwise run past `safeX[1]` (the right edge of what's actually visible
+// once the mobile map's edges are cropped; irrelevant on desktop, where nothing is cropped and
+// safeX is just the full map). Then nudges any label down, one line at a time, until its
+// (approximated) bounding box clears every label already placed. Processes points in the given
+// order, so earlier entries never move for later ones.
+function layoutLabels(points: Positioned[], style: MarkerStyle, safeX: [number, number]): Labelled[] {
   const placed: { left: number; right: number; top: number; bottom: number }[] = [];
   return points.map((point) => {
-    const left = point.x + point.radius + 4;
-    const width = approxLabelWidth(point.country.name);
+    const width = point.country.name.length * style.charWidth;
+    const startRight = point.x + point.radius + style.gap + width;
+    const anchor: "start" | "end" = startRight > safeX[1] ? "end" : "start";
+    const labelX = anchor === "start" ? point.x + point.radius + style.gap : point.x - point.radius - style.gap;
+    const left = anchor === "start" ? labelX : labelX - width;
     const right = left + width;
-    let labelY = point.y + 4;
+    let labelY = point.y + style.fontSize / 3;
     for (;;) {
-      const top = labelY - 10;
-      const bottom = labelY + 4;
+      const top = labelY - style.fontSize * 0.8;
+      const bottom = labelY + style.fontSize * 0.3;
       const overlapsPlaced = placed.some(
         (box) => !(right < box.left || left > box.right || bottom < box.top || top > box.bottom),
       );
       if (!overlapsPlaced) {
         placed.push({ left, right, top, bottom });
-        return { ...point, labelY };
+        return { ...point, labelX, labelY, anchor };
       }
-      labelY += 14;
+      labelY += style.lineHeight;
     }
   });
+}
+
+// SSR/first paint always assumes desktop sizing (matches the server's guess, since there's no
+// viewport to check yet) and upgrades to mobile sizing on mount if narrower than the `lg`
+// breakpoint — the same 1024px cutoff the rest of the app's mobile/desktop nav split uses.
+function useIsMobile(): boolean {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 1023px)");
+    setIsMobile(query.matches);
+    const onChange = (event: MediaQueryListEvent) => setIsMobile(event.matches);
+    query.addEventListener("change", onChange);
+    return () => query.removeEventListener("change", onChange);
+  }, []);
+  return isMobile;
 }
 
 export function CountryExplorer({ countries, initialCode }: { countries: CountryEntry[]; initialCode?: string }) {
   const [selected, setSelected] = useState<CountryEntry | null>(
     countries.find((country) => country.code === initialCode) ?? null,
   );
+  const isMobile = useIsMobile();
+  const style = isMobile ? MOBILE_MARKER : DESKTOP_MARKER;
 
   const countryByCode = useMemo(() => new Map(countries.map((country) => [country.code, country])), [countries]);
 
@@ -119,10 +186,11 @@ export function CountryExplorer({ countries, initialCode }: { countries: Country
       )
       .map((country) => {
         const { x, y } = project(country.latitude, country.longitude);
-        return { country, x, y, radius: 6 + Math.min(14, country.universityCount * 3) };
+        const radius = style.baseRadius + Math.min(style.maxRadiusBonus, country.universityCount * style.radiusPerUniversity);
+        return { country, x, y, radius };
       });
-    return layoutLabels(positioned);
-  }, [countries]);
+    return layoutLabels(positioned, style, isMobile ? MOBILE_SAFE_X : DESKTOP_SAFE_X);
+  }, [countries, style, isMobile]);
 
   const { mutedPaths, highlightedPaths, unmarkedHighlighted } = useMemo(() => {
     const positionedCodes = new Set(labelled.map((point) => point.country.code));
@@ -159,14 +227,31 @@ export function CountryExplorer({ countries, initialCode }: { countries: Country
 
   return (
     <div className="relative">
-      <div className="panel overflow-hidden">
+      {/* The map is 2:1 (viewBox 1000×500). On desktop the box stays exactly that shape
+          (aspect-[2/1] matches the viewBox exactly), so preserveAspectRatio="slice" behaves
+          identically to the default "meet" there — no crop, no letterbox, pixel-identical to
+          the old plain h-auto sizing.
+          Below `lg` the box is deliberately taller than 2:1 (aspect-[17/10]), so the map gets
+          real extra vertical room instead of the flat, barely-tappable strip a pure width-driven
+          2:1 box gives on a narrow screen. Given a taller box than its own content, "slice" zooms
+          in to fill it completely rather than leaving empty bars top and bottom — the trade-off
+          is cropping the left/right edges instead. Cropping vertically (trimming the poles) was
+          the other option, but it doesn't actually buy height: for a fixed width it only ever
+          shortens the box further, since latitude and longitude share one uniform scale. Cropping
+          longitude is also the safer axis here — this ratio loses about 30° off each side, which
+          every seeded marker's *dot* clears, Japan (closest, at 138°E) with a ~10° margin. Its
+          label text doesn't fit in that margin, though — labelled below handles that by flipping
+          a label to the left of its marker instead of the right, whenever the right-hand version
+          would run past the visible edge. */}
+      <div className="panel aspect-[17/10] overflow-hidden lg:aspect-[2/1]">
         {/* Not role="img": the shapes and markers below are real controls, and labelling the
             whole svg as a single image would flatten them out of the accessibility tree. The
             decorative ground (fill, muted countries, grid) is hidden from assistive tech
             instead, and each highlighted country carries its own name. */}
         <svg
           viewBox="0 0 1000 500"
-          className="h-auto w-full"
+          preserveAspectRatio="xMidYMid slice"
+          className="h-full w-full"
           role="group"
           aria-label="Countries in the dataset, plotted on a world map"
         >
@@ -219,7 +304,7 @@ export function CountryExplorer({ countries, initialCode }: { countries: Country
             );
           })}
 
-          {labelled.map(({ country, x, y, radius, labelY }) => {
+          {labelled.map(({ country, x, y, radius, labelX, labelY, anchor }) => {
             const active = selected?.code === country.code;
             const d = highlightedPaths.get(country.code);
             return (
@@ -236,8 +321,8 @@ export function CountryExplorer({ countries, initialCode }: { countries: Country
               >
                 {d && <path d={d} fillRule="evenodd" aria-hidden="true" />}
                 <circle cx={x} cy={y} r={radius} fill="#17635a" fillOpacity={active ? 0.28 : 0.14} aria-hidden="true" />
-                <circle cx={x} cy={y} r={4} fill={active ? "#0b1f29" : "#17635a"} aria-hidden="true" />
-                <text x={x + radius + 4} y={labelY} fontSize={13} fill="#47606b" aria-hidden="true">
+                <circle cx={x} cy={y} r={style.dotRadius} fill={active ? "#0b1f29" : "#17635a"} aria-hidden="true" />
+                <text x={labelX} y={labelY} textAnchor={anchor} fontSize={style.fontSize} fill="#47606b" aria-hidden="true">
                   {country.name}
                 </text>
               </g>
