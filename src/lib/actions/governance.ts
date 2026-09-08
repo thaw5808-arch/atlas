@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "../db";
 import { requireRole, requireUser } from "../session";
 
@@ -70,19 +71,25 @@ export async function proposeChange(input: {
   return { id: request.id };
 }
 
-const NUMERIC_FIELDS: Record<string, Set<string>> = {
-  TuitionRecord: new Set(["tuitionPerYear", "admissionFee", "otherAcademicFees"]),
-  LivingCostRecord: new Set([
-    "housingPerMonth",
-    "foodPerMonth",
-    "transportPerMonth",
-    "insurancePerMonth",
-    "personalPerMonth",
-    "booksPerYear",
-    "visaFeesPerYear",
-  ]),
-  AdmissionRequirement: new Set(["minGpa"]),
-  LanguageRequirement: new Set(["minScore"]),
+// Entity types a correction can be auto-applied to: which fields are safe to
+// write unattended, and which Prisma model holds them. Anything outside this
+// map (or outside a listed field) is rejected with "edit it directly instead".
+const APPLICABLE_ENTITIES: Record<string, { model: keyof Prisma.TransactionClient; fields: Set<string> }> = {
+  TuitionRecord: { model: "tuitionRecord", fields: new Set(["tuitionPerYear", "admissionFee", "otherAcademicFees"]) },
+  LivingCostRecord: {
+    model: "livingCostRecord",
+    fields: new Set([
+      "housingPerMonth",
+      "foodPerMonth",
+      "transportPerMonth",
+      "insurancePerMonth",
+      "personalPerMonth",
+      "booksPerYear",
+      "visaFeesPerYear",
+    ]),
+  },
+  AdmissionRequirement: { model: "admissionRequirement", fields: new Set(["minGpa"]) },
+  LanguageRequirement: { model: "languageRequirement", fields: new Set(["minScore"]) },
 };
 
 export async function resolveCorrection(requestId: string, decision: "approve" | "reject", note?: string) {
@@ -101,15 +108,15 @@ export async function resolveCorrection(requestId: string, decision: "approve" |
     return {};
   }
 
-  const allowed = NUMERIC_FIELDS[request.entityType];
-  if (!allowed?.has(request.field ?? "")) {
+  const applicable = APPLICABLE_ENTITIES[request.entityType];
+  if (!applicable?.fields.has(request.field ?? "")) {
     return { error: "That field can't be applied automatically — edit it directly instead" };
   }
   const value = Number(request.claimedValue);
   if (!Number.isFinite(value) || value < 0) return { error: "The proposed value isn't a valid number" };
 
   await prisma.$transaction(async (tx) => {
-    const model = request.entityType === "TuitionRecord" ? tx.tuitionRecord : tx.livingCostRecord;
+    const model = tx[applicable.model];
     const before = (await (model as typeof tx.tuitionRecord).findUnique({ where: { id: request.entityId } })) as
       | Record<string, unknown>
       | null;
